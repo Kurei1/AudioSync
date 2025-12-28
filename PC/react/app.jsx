@@ -197,12 +197,22 @@ const App = () => {
             usbStep3: "Start Streaming from the phone.",
             usbStep4: "Select your device and click Start Listening.",
             usbStep5: "Use the volume shortcuts to adjust the volume.",
+            // Bluetooth instructions
+            bluetoothStep1: "Enable Bluetooth on both devices.",
+            bluetoothStep2: "Pair your phone with this PC.",
+            bluetoothStep3: "Click Start Listening.",
+            bluetoothStep4: "Start Streaming from the phone.",
             buffer: "Buffer",
             fasterAudio: "Faster Audio",
             smootherAudio: "Smoother Audio",
             androidDevice: "Android Device",
             noDevices: "No devices found",
             adbMissing: "ADB Tools Missing",
+            // Volume note
+            volumeNote: "Shortcuts are global and override other apps (e.g. Ctrl+V stops working for Paste). Invalid combinations (like 3 keys without modifiers) may not record.",
+            // Notification modal
+            muteNotifications: "Mute Notifications",
+            unmuteNotifications: "Unmute Notifications",
         },
         ar: {
             // Title bar
@@ -210,12 +220,12 @@ const App = () => {
             receiver: "المستقبل",
             // Methods
             lanNetwork: "شبكة محلية",
-            usbTether: "USB ربط",
+            usbTether: "ربط الـ USB",
             bluetooth: "بلوتوث",
             // Settings
             listenPort: "منفذ الاستماع",
             random: "عشوائي",
-            outputDevice: "جهاز الإخراج",
+            outputDevice: "جهاز إخراج الصوت",
             defaultOutput: "إخراج النظام الافتراضي",
             volumeControls: "التحكم في الصوت",
             volumeUp: "رفع الصوت",
@@ -229,10 +239,10 @@ const App = () => {
             receivingAudio: "جاري استقبال البث...",
             waitingPackets: "في انتظار حزم الصوت...",
             connectPhone: "قم بتوصيل هاتفك بعنوان IP أدناه",
-            startListening: "بدء الاستماع",
-            stopListening: "إيقاف الاستماع",
-            serviceStarted: "بدأت الخدمة",
-            serviceStopped: "توقفت الخدمة",
+            startListening: "بدء الخدمة",
+            stopListening: "إيقاف الخدمة",
+            serviceStarted: "الخدمة نشطة",
+            serviceStopped: "الخدمة موقفة",
             // Info panels
             wifiReceiver: "مستقبل صوت Wi-Fi",
             usbBridge: "جسر صوت USB",
@@ -252,23 +262,34 @@ const App = () => {
             clearNotifications: "مسح الإشعارات",
             termsTitle: "شروط الاستخدام",
             termsAccept: "أوافق",
-            // Instructions
+            // Instructions - keep technical terms in English
             wifiStep1: "قم بتوصيل كلا الجهازين بنفس شبكة Wi-Fi.",
-            wifiStep2: "أدخل عنوان IP والمنفذ في التطبيق.",
+            wifiStep2: "أدخل عنوان Server IP و Port في التطبيق.",
             wifiStep3: "ابدأ البث من الهاتف.",
-            wifiStep4: "انقر على بدء الاستماع.",
+            wifiStep4: "انقر على بدء الخدمة.",
             wifiStep5: "استخدم اختصارات الصوت لضبط مستوى الصوت.",
-            usbStep1: "قم بتمكين تصحيح USB (تحقق من تطبيق الهاتف).",
+            usbStep1: "قم بتمكين USB Debugging (تحقق من تطبيق الهاتف).",
             usbStep2: "قم بالتوصيل عبر USB واسمح بطلب الاتصال.",
             usbStep3: "ابدأ البث من الهاتف.",
-            usbStep4: "حدد جهازك وانقر على بدء الاستماع.",
+            usbStep4: "حدد جهازك وانقر على بدء الخدمة.",
             usbStep5: "استخدم اختصارات الصوت لضبط مستوى الصوت.",
-            buffer: "المخزن المؤقت",
-            fasterAudio: "صوت أسرع",
-            smootherAudio: "صوت أنعم",
-            androidDevice: "جهاز أندرويد",
+            // Bluetooth instructions
+            bluetoothStep1: "قم بتشغيل البلوتوث على كلا الجهازين.",
+            bluetoothStep2: "قم بإقران الهاتف مع هذا الكمبيوتر.",
+            bluetoothStep3: "انقر على بدء الخدمة.",
+            bluetoothStep4: "ابدأ البث من الهاتف.",
+            // Buffer - keep in English
+            buffer: "Buffer",
+            fasterAudio: "Faster Audio",
+            smootherAudio: "Smoother Audio",
+            androidDevice: "جهاز Android",
             noDevices: "لم يتم العثور على أجهزة",
             adbMissing: "أدوات ADB مفقودة",
+            // Volume note
+            volumeNote: "الاختصارات عامة وتتجاوز التطبيقات الأخرى (مثل Ctrl+V يتوقف عن اللصق). التركيبات غير الصالحة (مثل 3 مفاتيح بدون معدّلات) قد لا تُسجّل.",
+            // Notification modal
+            muteNotifications: "كتم الإشعارات",
+            unmuteNotifications: "إلغاء كتم الإشعارات",
         }
     };
 
@@ -1319,7 +1340,7 @@ const App = () => {
                             </div>
                         </div>
                         <div className="text-[10px] opacity-50 px-2 leading-relaxed">
-                            <b className="text-amber-500">Note:</b> Shortcuts are global and override other apps (e.g. <code>Ctrl+V</code> stops working for Paste). Invalid combinations (like 3 keys without modifiers) may not record.
+                            <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('volumeNote')}
                         </div>
 
                     </div>
@@ -1799,7 +1820,7 @@ const App = () => {
             <Modal
                 isOpen={isNotificationOpen}
                 onClose={() => setIsNotificationOpen(false)}
-                title="Notifications"
+                title={t('notifications')}
                 maxWidth="max-w-lg"
                 isDarkMode={isDarkMode}
                 rightAction={(
@@ -1807,14 +1828,14 @@ const App = () => {
                         <button
                             onClick={() => fetchRemoteNotifications(false)}
                             className="p-2 hover:bg-zinc-500/10 rounded-full transition-colors"
-                            title="Refresh Notifications"
+                            title={language === 'ar' ? 'تحديث الإشعارات' : 'Refresh Notifications'}
                         >
                             <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
                         </button>
                         <button
                             onClick={toggleSoundMute}
                             className={`p-2 hover:bg-zinc-500/10 rounded-full transition-all relative group`}
-                            title={isSoundMuted ? "Unmute all system sounds" : "Mute all system sounds"}
+                            title={isSoundMuted ? t('unmuteNotifications') : t('muteNotifications')}
                         >
                             <Bell size={18} className={`transition-transform ${!isSoundMuted ? 'group-hover:animate-bell-ring' : ''}`} />
                             {/* Animated slash overlay */}
@@ -1829,7 +1850,7 @@ const App = () => {
                     {notifications.length === 0 ? (
                         <div className="text-center py-8 opacity-50">
                             <Bell size={48} className="mx-auto mb-2 opacity-20" />
-                            <p>No new notifications</p>
+                            <p>{t('noNotifications')}</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -1880,7 +1901,7 @@ const App = () => {
                             onClick={handleClearNotifications}
                             className={`w-full py-3 rounded-2xl font-bold transition-colors text-sm ${isDarkMode ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-zinc-200 text-zinc-600'}`}
                         >
-                            Clear Notifications
+                            {t('clearNotifications')}
                         </button>
                     </div>
                 )}
