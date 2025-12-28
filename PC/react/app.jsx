@@ -1109,7 +1109,7 @@ const App = () => {
             )}
 
             {/* --- CUSTOM TITLE BAR --- */}
-            <div className={`h-11 flex items-center justify-between px-4 select-none title-drag-region border-b transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'} z-50`}>
+            <div dir="ltr" className={`h-11 flex items-center justify-between px-4 select-none title-drag-region border-b transition-colors ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-100 border-zinc-200'} z-50`}>
                 <div className="flex items-center gap-2 opacity-80 pl-2">
                     <Volume2 className="text-blue-500" size={16} />
                     <span className="text-xs font-bold tracking-widest uppercase">AudioSync</span>
@@ -1204,15 +1204,15 @@ const App = () => {
                             {/* Port */}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium opacity-70">Listen Port</label>
+                                    <label className="text-sm font-medium opacity-70">{t('listenPort')}</label>
                                     <button
                                         onClick={generateSimplePort}
                                         disabled={isConnected}
                                         className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/10 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
-                                        title="Generate Random Simple Port"
+                                        title={language === 'ar' ? 'إنشاء منفذ عشوائي' : 'Generate Random Simple Port'}
                                     >
                                         <Shuffle size={12} />
-                                        RANDOM
+                                        {t('random')}
                                     </button>
                                 </div>
                                 <input
@@ -1228,11 +1228,11 @@ const App = () => {
                             {/* Output Device (Global) */}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium opacity-70">Output Device</label>
+                                    <label className="text-sm font-medium opacity-70">{t('outputDevice')}</label>
                                     <button
                                         onClick={handleDeviceRefresh}
                                         className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors"
-                                        title="Refresh Devices"
+                                        title={language === 'ar' ? 'تحديث الأجهزة' : 'Refresh Devices'}
                                     >
                                         <RefreshCw size={14} className={`${isRefreshing ? 'animate-spin' : ''}`} />
                                     </button>
@@ -1244,7 +1244,7 @@ const App = () => {
                                         disabled={isConnected}
                                         className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
                                     >
-                                        <option value="-1">Default System Output</option>
+                                        <option value="-1">{t('defaultOutput')}</option>
                                         {devices.map((dev) => {
                                             const [id, ...nameParts] = dev.split(':');
                                             return <option key={id} value={id}>{nameParts.join(':').trim()}</option>;
@@ -1259,12 +1259,12 @@ const App = () => {
                         <div className="space-y-2 mb-4 flex-shrink-0">
                             <div className="flex justify-between items-center">
                                 <label className="text-sm font-medium opacity-70 flex items-center gap-2">
-                                    <Sliders size={14} /> Volume Controls
+                                    <Sliders size={14} /> {t('volumeControls')}
                                 </label>
                                 <button
                                     onClick={resetShortcuts}
                                     disabled={isConnected}
-                                    title="Reset Defaults"
+                                    title={language === 'ar' ? 'إعادة التعيين' : 'Reset Defaults'}
                                     className="p-1 hover:bg-zinc-500/10 rounded-full transition-colors opacity-50 hover:opacity-100"
                                 >
                                     <RotateCcw size={12} />
@@ -1274,7 +1274,7 @@ const App = () => {
                             <div className={`p-2 rounded-2xl border space-y-1 ${isDarkMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-100/50 border-zinc-200'}`}>
                                 {/* Vol Up */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">Volume Up</span>
+                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('volumeUp')}</span>
                                     <button
                                         onClick={() => setIsRecording('volUp')}
                                         disabled={isConnected}
@@ -1283,13 +1283,13 @@ const App = () => {
                                             : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
                                             } disabled:opacity-50`}
                                     >
-                                        {isRecording === 'volUp' ? 'Press Keys...' : (shortcuts.volUp || 'None')}
+                                        {isRecording === 'volUp' ? (language === 'ar' ? '...اضغط' : 'Press Keys...') : (shortcuts.volUp || (language === 'ar' ? 'لا يوجد' : 'None'))}
                                     </button>
                                 </div>
 
                                 {/* Vol Down */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">Volume Down</span>
+                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('volumeDown')}</span>
                                     <button
                                         onClick={() => setIsRecording('volDown')}
                                         disabled={isConnected}
@@ -1298,13 +1298,13 @@ const App = () => {
                                             : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
                                             } disabled:opacity-50`}
                                     >
-                                        {isRecording === 'volDown' ? 'Press Keys...' : (shortcuts.volDown || 'None')}
+                                        {isRecording === 'volDown' ? (language === 'ar' ? '...اضغط' : 'Press Keys...') : (shortcuts.volDown || (language === 'ar' ? 'لا يوجد' : 'None'))}
                                     </button>
                                 </div>
 
                                 {/* Mute */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">Mute / Unmute</span>
+                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('muteUnmute')}</span>
                                     <button
                                         onClick={() => setIsRecording('mute')}
                                         disabled={isConnected}
@@ -1313,7 +1313,7 @@ const App = () => {
                                             : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
                                             } disabled:opacity-50`}
                                     >
-                                        {isRecording === 'mute' ? 'Record...' : (shortcuts.mute || 'None')}
+                                        {isRecording === 'mute' ? (language === 'ar' ? '...سجل' : 'Record...') : (shortcuts.mute || (language === 'ar' ? 'لا يوجد' : 'None'))}
                                     </button>
                                 </div>
                             </div>
@@ -1366,16 +1366,16 @@ const App = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold">
-                                        {connectionState === 'connected' ? 'Receiver Active' :
-                                            connectionState === 'connecting' ? 'Connecting...' :
-                                                connectionState === 'failed' ? 'Connection Failed' :
-                                                    'Ready to Connect'}
+                                        {connectionState === 'connected' ? t('receiverActive') :
+                                            connectionState === 'connecting' ? t('connecting') :
+                                                connectionState === 'failed' ? t('connectionFailed') :
+                                                    t('readyToConnect')}
                                     </h3>
                                     <p className={`text-sm mt-1 ${connectionState !== 'idle' ? 'text-white/80' : 'opacity-60'}`}>
-                                        {connectionState === 'connected' ? (activeMethod === 'bluetooth' ? 'Service started' : 'Receiving audio stream...') :
-                                            connectionState === 'connecting' ? 'Waiting for audio packets...' :
-                                                connectionState === 'failed' ? 'Could not receive any data.' :
-                                                    (activeMethod === 'bluetooth' ? 'Service stopped' : 'Connect your phone to the IP below')}
+                                        {connectionState === 'connected' ? (activeMethod === 'bluetooth' ? t('serviceStarted') : t('receivingAudio')) :
+                                            connectionState === 'connecting' ? t('waitingPackets') :
+                                                connectionState === 'failed' ? (language === 'ar' ? 'تعذر استقبال البيانات.' : 'Could not receive any data.') :
+                                                    (activeMethod === 'bluetooth' ? t('serviceStopped') : t('connectPhone'))}
                                     </p>
                                 </div>
                                 <button
@@ -1388,10 +1388,10 @@ const App = () => {
                                         }`}
                                 >
                                     {activeMethod === 'bluetooth' && cooldownSeconds > 0
-                                        ? `Wait (${cooldownSeconds}s)`
-                                        : connectionState === 'connected' ? 'Stop Listening' :
-                                            connectionState === 'connecting' ? 'Connecting...' :
-                                                'Start Listening'}
+                                        ? `${language === 'ar' ? 'انتظر' : 'Wait'} (${cooldownSeconds}s)`
+                                        : connectionState === 'connected' ? t('stopListening') :
+                                            connectionState === 'connecting' ? t('connecting') :
+                                                t('startListening')}
                                 </button>
                             </div>
                         </div>
@@ -1401,14 +1401,26 @@ const App = () => {
                             <div className={`p-3 rounded-2xl border flex flex-col gap-1 flex-shrink-0 ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
                                 <div className="flex items-center justify-center w-full gap-2 mb-1">
                                     <Wifi size={20} className="text-blue-500" />
-                                    <p className="text-sm font-bold text-blue-500">Wi-Fi Audio Receiver</p>
+                                    <p className="text-sm font-bold text-blue-500">{t('wifiReceiver')}</p>
                                 </div>
                                 <p className={`text-sm ${isDarkMode ? 'text-blue-200/80' : 'text-blue-800/80'}`}>
-                                    1. Connect both devices to the <b>same Wi-Fi</b>.<br />
-                                    2. Enter the <b>Server IP</b> & <b>Port</b> in the app.<br />
-                                    3. <b>Start Streaming</b> from the phone.<br />
-                                    4. Click <b>Start Listening</b>.<br />
-                                    5. Use the <b>volume shortcuts</b> to adjust the volume.
+                                    {language === 'ar' ? (
+                                        <>
+                                            1. {t('wifiStep1')}<br />
+                                            2. {t('wifiStep2')}<br />
+                                            3. {t('wifiStep3')}<br />
+                                            4. {t('wifiStep4')}<br />
+                                            5. {t('wifiStep5')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            1. Connect both devices to the <b>same Wi-Fi</b>.<br />
+                                            2. Enter the <b>Server IP</b> & <b>Port</b> in the app.<br />
+                                            3. <b>Start Streaming</b> from the phone.<br />
+                                            4. Click <b>Start Listening</b>.<br />
+                                            5. Use the <b>volume shortcuts</b> to adjust the volume.
+                                        </>
+                                    )}
                                 </p>
                             </div>
                         )}
@@ -1418,14 +1430,26 @@ const App = () => {
                             <div className={`p-3 rounded-2xl border flex flex-col gap-1 flex-shrink-0 ${isDarkMode ? 'bg-purple-500/10 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
                                 <div className="flex items-center justify-center w-full gap-2 mb-1">
                                     <Usb size={20} className="text-purple-500" />
-                                    <p className="text-sm font-bold text-purple-500">USB Audio Bridge</p>
+                                    <p className="text-sm font-bold text-purple-500">{t('usbBridge')}</p>
                                 </div>
                                 <p className={`text-sm ${isDarkMode ? 'text-purple-200/80' : 'text-purple-800/80'}`}>
-                                    1. Enable <b>USB Debugging</b> (check phone app for info).<br />
-                                    2. Connect via USB and <b>allow</b> the connection prompt.<br />
-                                    3. <b>Start Streaming</b> from the phone.<br />
-                                    4. Select your device and click <b>Start Listening</b>.<br />
-                                    5. Use the <b>volume shortcuts</b> to adjust the volume.
+                                    {language === 'ar' ? (
+                                        <>
+                                            1. {t('usbStep1')}<br />
+                                            2. {t('usbStep2')}<br />
+                                            3. {t('usbStep3')}<br />
+                                            4. {t('usbStep4')}<br />
+                                            5. {t('usbStep5')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            1. Enable <b>USB Debugging</b> (check phone app for info).<br />
+                                            2. Connect via USB and <b>allow</b> the connection prompt.<br />
+                                            3. <b>Start Streaming</b> from the phone.<br />
+                                            4. Select your device and click <b>Start Listening</b>.<br />
+                                            5. Use the <b>volume shortcuts</b> to adjust the volume.
+                                        </>
+                                    )}
                                 </p>
                             </div>
                         )}
@@ -1439,8 +1463,8 @@ const App = () => {
                                     <div className="grid grid-cols-1 gap-2">
                                         <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
                                             <div className="flex justify-between items-center mb-3">
-                                                <label className="text-xs font-bold uppercase tracking-wider opacity-60">Buffer</label>
-                                                <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 100 && ' (Default)'}</span>
+                                                <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('buffer')}</label>
+                                                <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 100 && (language === 'ar' ? ' (افتراضي)' : ' (Default)')}</span>
                                             </div>
                                             <input
                                                 type="range"
@@ -1452,8 +1476,8 @@ const App = () => {
                                                 className={`w-full h-1.5 bg-zinc-500/20 rounded-lg appearance-none cursor-pointer ${getBufferAccent(bufferValue)}`}
                                             />
                                             <div className="flex justify-between text-[10px] opacity-40 mt-3 font-medium px-1">
-                                                <span>Faster Audio</span>
-                                                <span>Smoother Audio</span>
+                                                <span>{t('fasterAudio')}</span>
+                                                <span>{t('smootherAudio')}</span>
                                             </div>
                                         </div>
 
@@ -1546,16 +1570,16 @@ const App = () => {
                                         activeMethod === 'bluetooth' ? <Bluetooth size={16} /> :
                                             <Info size={16} />}
                                     <span className="text-xs font-bold uppercase tracking-wider">
-                                        {activeMethod === 'usb' ? 'Phone Name' :
-                                            activeMethod === 'bluetooth' ? 'Bluetooth Name' :
-                                                'Device IP'}
+                                        {activeMethod === 'usb' ? t('phoneName') :
+                                            activeMethod === 'bluetooth' ? t('bluetoothName') :
+                                                t('deviceIP')}
                                     </span>
                                 </div>
                                 <p className={`text-xl font-bold tracking-tight truncate ${activeMethod !== 'usb' ? 'font-mono' : ''}`}>
                                     {activeMethod === 'usb'
-                                        ? (usbDevices.find(d => d.serial === selectedUsbDevice)?.model || 'No Device')
+                                        ? (usbDevices.find(d => d.serial === selectedUsbDevice)?.model || (language === 'ar' ? 'لا يوجد جهاز' : 'No Device'))
                                         : activeMethod === 'bluetooth'
-                                            ? (systemInfo.hostname || 'This PC')
+                                            ? (systemInfo.hostname || (language === 'ar' ? 'هذا الكمبيوتر' : 'This PC'))
                                             : systemInfo.ip}
                                 </p>
                             </div>
@@ -1565,11 +1589,11 @@ const App = () => {
                                 <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
                                     <div className="flex items-center gap-2 mb-1 opacity-60">
                                         <Smartphone size={16} />
-                                        <span className="text-xs font-bold uppercase tracking-wider">Connected to</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider">{t('connectedTo')}</span>
                                     </div>
                                     <p className="text-xl font-bold tracking-tight truncate">
                                         {connectionState === 'connected'
-                                            ? (bluetoothDeviceName || 'Unknown Device')
+                                            ? (bluetoothDeviceName || (language === 'ar' ? 'جهاز غير معروف' : 'Unknown Device'))
                                             : '--'}
                                     </p>
                                 </div>
@@ -1580,7 +1604,7 @@ const App = () => {
                                 <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
                                     <div className="flex items-center gap-2 mb-1 opacity-60">
                                         <Cpu size={16} />
-                                        <span className="text-xs font-bold uppercase tracking-wider">Est. Latency</span>
+                                        <span className="text-xs font-bold uppercase tracking-wider">{t('estLatency')}</span>
                                     </div>
                                     <p className="text-xl font-bold">{isConnected ? `${latencyMs}ms` : '--'}</p>
                                 </div>
@@ -1590,7 +1614,7 @@ const App = () => {
                             <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
                                 <div className="flex items-center gap-2 mb-1 opacity-60">
                                     <ShieldCheck size={16} />
-                                    <span className="text-xs font-bold uppercase tracking-wider">Stats</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider">{t('stats')}</span>
                                 </div>
                                 <p className="text-sm font-bold truncate">
                                     {activeMethod === 'bluetooth'
