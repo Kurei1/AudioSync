@@ -236,7 +236,7 @@ const App = () => {
             listenPort: "منفذ الاستماع",
             random: "عشوائي",
             outputDevice: "جهاز إخراج الصوت",
-            defaultOutput: "إخراج النظام الافتراضي",
+            defaultOutput: "مكبر الصوت الافتراضي",
             volumeControls: "التحكم في الصوت",
             volumeUp: "رفع الصوت",
             volumeDown: "خفض الصوت",
@@ -1281,7 +1281,7 @@ const App = () => {
                                         value={selectedDevice}
                                         onChange={(e) => setSelectedDevice(e.target.value)}
                                         disabled={isConnected}
-                                        className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
+                                        className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${language === 'ar' ? 'pl-10' : 'pr-10'} ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
                                     >
                                         <option value="-1">{t('defaultOutput')}</option>
                                         {devices.map((dev) => {
@@ -1289,7 +1289,7 @@ const App = () => {
                                             return <option key={id} value={id}>{nameParts.join(':').trim()}</option>;
                                         })}
                                     </select>
-                                    <ChevronRight size={14} className="absolute right-3 top-3.5 pointer-events-none opacity-50 rotate-90" />
+                                    <ChevronRight size={14} className={`absolute top-3.5 pointer-events-none opacity-50 rotate-90 ${language === 'ar' ? 'left-3' : 'right-3'}`} />
                                 </div>
                             </div>
                         </div>
@@ -1543,14 +1543,14 @@ const App = () => {
                                                     <select
                                                         value={selectedUsbDevice}
                                                         onChange={(e) => setSelectedUsbDevice(e.target.value)}
-                                                        className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}
+                                                        className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${language === 'ar' ? 'pl-10' : 'pr-10'} ${isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}
                                                     >
                                                         {usbDevices.length === 0 && <option value="">{t('noDevices')}</option>}
                                                         {usbDevices.map(d => (
                                                             <option key={d.serial} value={d.serial}>{d.model} ({d.serial.slice(0, 4)}...)</option>
                                                         ))}
                                                     </select>
-                                                    <ChevronRight size={14} className="absolute right-3 top-3.5 pointer-events-none opacity-50 rotate-90" />
+                                                    <ChevronRight size={14} className={`absolute top-3.5 pointer-events-none opacity-50 rotate-90 ${language === 'ar' ? 'left-3' : 'right-3'}`} />
                                                 </div>
                                             )}
                                         </div>
