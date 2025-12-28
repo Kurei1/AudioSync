@@ -213,6 +213,16 @@ const App = () => {
             // Notification modal
             muteNotifications: "Mute Notifications",
             unmuteNotifications: "Unmute Notifications",
+            // Bluetooth warning
+            bluetoothNote: "Windows does not natively support this method, which may cause temporary Bluetooth instability.",
+            bluetoothStep3_Alt: "No Sound? Disconnect and connect again.",
+            bluetoothStep4_Alt: "Volume: Control via phone.",
+            // Stats status
+            active: "Active",
+            idle: "Idle",
+            rec: "Rec:",
+            lost: "Lost:",
+            bluetoothExp: "Bluetooth A2DP (Experimental)",
         },
         ar: {
             // Title bar
@@ -274,10 +284,13 @@ const App = () => {
             usbStep4: "حدد جهازك وانقر على بدء الخدمة.",
             usbStep5: "استخدم اختصارات الصوت لضبط مستوى الصوت.",
             // Bluetooth instructions
-            bluetoothStep1: "قم بتشغيل البلوتوث على كلا الجهازين.",
+            bluetoothStep1: "قم بتشغيل Bluetooth على كلا الجهازين.",
             bluetoothStep2: "قم بإقران الهاتف مع هذا الكمبيوتر.",
             bluetoothStep3: "انقر على بدء الخدمة.",
             bluetoothStep4: "ابدأ البث من الهاتف.",
+            bluetoothStep3_Alt: "لا يوجد صوت؟ افصل وأعد الاتصال.",
+            bluetoothStep4_Alt: "المستوى: التحكم عبر الهاتف.",
+            bluetoothNote: "Windows لا يدعم هذه الطريقة بشكل أصلي، مما قد يسبب عدم استقرار مؤقت في البلوتوث.",
             // Buffer - keep in English
             buffer: "Buffer",
             fasterAudio: "Faster Audio",
@@ -290,6 +303,11 @@ const App = () => {
             // Notification modal
             muteNotifications: "كتم الإشعارات",
             unmuteNotifications: "إلغاء كتم الإشعارات",
+            // Stats Status
+            active: "نشط",
+            idle: "خامل",
+            rec: "استلام:",
+            lost: "مفقود:",
         }
     };
 
@@ -1511,14 +1529,14 @@ const App = () => {
                                     <div className="space-y-2">
                                         <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
                                             <div className="flex items-center justify-between mb-3">
-                                                <label className="text-xs font-bold uppercase tracking-wider opacity-60">Android Device</label>
+                                                <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('androidDevice')}</label>
                                                 <button onClick={refreshUsbDevices} className="p-1 hover:bg-zinc-500/10 rounded-full transition-colors">
                                                     <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
                                                 </button>
                                             </div>
                                             {adbStatus === 'missing' ? (
                                                 <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-xl flex items-center gap-2">
-                                                    <AlertCircle size={16} /> <span>ADB Tools Missing</span>
+                                                    <AlertCircle size={16} /> <span>{t('adbMissing')}</span>
                                                 </div>
                                             ) : (
                                                 <div className="relative">
@@ -1527,7 +1545,7 @@ const App = () => {
                                                         onChange={(e) => setSelectedUsbDevice(e.target.value)}
                                                         className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}
                                                     >
-                                                        {usbDevices.length === 0 && <option value="">No devices found</option>}
+                                                        {usbDevices.length === 0 && <option value="">{t('noDevices')}</option>}
                                                         {usbDevices.map(d => (
                                                             <option key={d.serial} value={d.serial}>{d.model} ({d.serial.slice(0, 4)}...)</option>
                                                         ))}
@@ -1540,8 +1558,8 @@ const App = () => {
                                         <div className="grid grid-cols-1 gap-2">
                                             <div className={`p-2 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
                                                 <div className="flex justify-between items-center mb-3">
-                                                    <label className="text-xs font-bold uppercase tracking-wider opacity-60">Buffer</label>
-                                                    <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 10 && ' (Default)'}</span>
+                                                    <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('buffer')}</label>
+                                                    <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 10 && (language === 'ar' ? ' (افتراضي)' : ' (Default)')}</span>
                                                 </div>
                                                 <input
                                                     type="range"
@@ -1567,17 +1585,19 @@ const App = () => {
                             <div className={`p-3 rounded-2xl border flex flex-col gap-2 flex-shrink-0 ${isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
                                 <div className="flex items-center justify-center gap-2">
                                     <Bluetooth size={16} className="text-amber-500" />
-                                    <p className="text-sm font-bold text-amber-500">Bluetooth A2DP (Experimental)</p>
+                                    <p className="text-sm font-bold text-amber-500">{t('bluetoothExp')}</p>
                                 </div>
-                                <div className={`text-xs text-left space-y-1 ${isDarkMode ? 'text-amber-200/80' : 'text-amber-800/80'}`}>
+                                <div className={`text-xs text-left space-y-1 ${isDarkMode ? 'text-amber-200/80' : 'text-amber-800/80'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
                                     <p className={`p-2 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/10' : 'bg-white/50 border-amber-200'}`}>
-                                        <b>Note:</b> Windows does not natively support this method, which may cause temporary Bluetooth instability.
+                                        <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('bluetoothNote')}
                                     </p>
-                                    <ol className="list-decimal list-inside space-y-1 px-1">
-                                        <li>Turn Bluetooth <b>ON</b> on both devices.</li>
-                                        <li>Click <b>Start Listening</b>, then connect to this PC from your <b>Phone</b>.</li>
-                                        <li><b>No Sound?</b> Disconnect and connect again.</li>
-                                        <li><b>Volume:</b> Control via phone.</li>
+                                    <ol className={`list-decimal list-inside space-y-1 px-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                                        <li>{t('bluetoothStep1')}</li>
+                                        <li>{t('bluetoothStep2')}</li>
+                                        <li>{t('bluetoothStep3')}</li>
+                                        <li>{t('bluetoothStep4')}</li>
+                                        <li className="mt-1 pt-1 border-t border-amber-500/20">{t('bluetoothStep3_Alt')}</li>
+                                        <li>{t('bluetoothStep4_Alt')}</li>
                                     </ol>
                                 </div>
                             </div>
@@ -1637,10 +1657,10 @@ const App = () => {
                                     <ShieldCheck size={16} />
                                     <span className="text-xs font-bold uppercase tracking-wider">{t('stats')}</span>
                                 </div>
-                                <p className="text-sm font-bold truncate">
+                                <p className="text-sm font-bold truncate" dir="ltr">
                                     {activeMethod === 'bluetooth'
-                                        ? (connectionState === 'connected' ? 'Active' : 'Idle')
-                                        : (isConnected ? `Rec: ${stats.received} | Lost: ${stats.lost}` : 'Idle')}
+                                        ? (connectionState === 'connected' ? t('active') : t('idle'))
+                                        : (isConnected ? `${t('rec')} ${stats.received} | ${t('lost')} ${stats.lost}` : t('idle'))}
                                 </p>
                             </div>
 
