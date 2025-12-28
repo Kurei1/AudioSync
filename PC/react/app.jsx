@@ -36,7 +36,10 @@ import {
     Shuffle,
     Lock,
     Eye,
-    EyeOff
+    EyeOff,
+    Globe,
+    Languages,
+    FileText
 } from 'lucide-react';
 
 import connSound from './assets/sounds/conn.mp3';
@@ -121,6 +124,177 @@ const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth
 const App = () => {
     // Theme and UI State
     const [isDarkMode, setIsDarkMode] = useState(true);
+
+    // Language state (en = English, ar = Arabic)
+    const [language, setLanguage] = useState(() => {
+        return localStorage.getItem('app_language') || 'en';
+    });
+
+    // Terms of use acceptance
+    const [termsAccepted, setTermsAccepted] = useState(() => {
+        return localStorage.getItem('terms_accepted') === 'true';
+    });
+    const [isTermsOpen, setIsTermsOpen] = useState(false);
+
+    // Translations
+    const translations = {
+        en: {
+            // Title bar
+            appName: "AudioSync",
+            receiver: "Receiver",
+            // Methods
+            lanNetwork: "LAN Network",
+            usbTether: "USB Tether",
+            bluetooth: "Bluetooth",
+            // Settings
+            listenPort: "Listen Port",
+            random: "RANDOM",
+            outputDevice: "Output Device",
+            defaultOutput: "Default System Output",
+            volumeControls: "Volume Controls",
+            volumeUp: "Volume Up",
+            volumeDown: "Volume Down",
+            muteUnmute: "Mute / Unmute",
+            // Status
+            readyToConnect: "Ready to Connect",
+            receiverActive: "Receiver Active",
+            connecting: "Connecting...",
+            connectionFailed: "Connection Failed",
+            receivingAudio: "Receiving audio stream...",
+            waitingPackets: "Waiting for audio packets...",
+            connectPhone: "Connect your phone to the IP below",
+            startListening: "Start Listening",
+            stopListening: "Stop Listening",
+            serviceStarted: "Service started",
+            serviceStopped: "Service stopped",
+            // Info panels
+            wifiReceiver: "Wi-Fi Audio Receiver",
+            usbBridge: "USB Audio Bridge",
+            bluetoothExp: "Bluetooth A2DP (Experimental)",
+            // Stats
+            deviceIP: "Device IP",
+            phoneName: "Phone Name",
+            bluetoothName: "Bluetooth Name",
+            connectedTo: "Connected to",
+            estLatency: "Est. Latency",
+            stats: "Stats",
+            // Footer
+            supportDev: "Support the Developer",
+            // Modal titles
+            notifications: "Notifications",
+            noNotifications: "No new notifications",
+            clearNotifications: "Clear Notifications",
+            termsTitle: "Terms of Use",
+            termsAccept: "I Accept",
+            // Instructions
+            wifiStep1: "Connect both devices to the same Wi-Fi.",
+            wifiStep2: "Enter the Server IP & Port in the app.",
+            wifiStep3: "Start Streaming from the phone.",
+            wifiStep4: "Click Start Listening.",
+            wifiStep5: "Use the volume shortcuts to adjust the volume.",
+            usbStep1: "Enable USB Debugging (check phone app for info).",
+            usbStep2: "Connect via USB and allow the connection prompt.",
+            usbStep3: "Start Streaming from the phone.",
+            usbStep4: "Select your device and click Start Listening.",
+            usbStep5: "Use the volume shortcuts to adjust the volume.",
+            buffer: "Buffer",
+            fasterAudio: "Faster Audio",
+            smootherAudio: "Smoother Audio",
+            androidDevice: "Android Device",
+            noDevices: "No devices found",
+            adbMissing: "ADB Tools Missing",
+        },
+        ar: {
+            // Title bar
+            appName: "أوديو سينك",
+            receiver: "المستقبل",
+            // Methods
+            lanNetwork: "شبكة محلية",
+            usbTether: "USB ربط",
+            bluetooth: "بلوتوث",
+            // Settings
+            listenPort: "منفذ الاستماع",
+            random: "عشوائي",
+            outputDevice: "جهاز الإخراج",
+            defaultOutput: "إخراج النظام الافتراضي",
+            volumeControls: "التحكم في الصوت",
+            volumeUp: "رفع الصوت",
+            volumeDown: "خفض الصوت",
+            muteUnmute: "كتم / إلغاء الكتم",
+            // Status
+            readyToConnect: "جاهز للاتصال",
+            receiverActive: "المستقبل نشط",
+            connecting: "جاري الاتصال...",
+            connectionFailed: "فشل الاتصال",
+            receivingAudio: "جاري استقبال البث...",
+            waitingPackets: "في انتظار حزم الصوت...",
+            connectPhone: "قم بتوصيل هاتفك بعنوان IP أدناه",
+            startListening: "بدء الاستماع",
+            stopListening: "إيقاف الاستماع",
+            serviceStarted: "بدأت الخدمة",
+            serviceStopped: "توقفت الخدمة",
+            // Info panels
+            wifiReceiver: "مستقبل صوت Wi-Fi",
+            usbBridge: "جسر صوت USB",
+            bluetoothExp: "بلوتوث A2DP (تجريبي)",
+            // Stats
+            deviceIP: "عنوان IP",
+            phoneName: "اسم الهاتف",
+            bluetoothName: "اسم البلوتوث",
+            connectedTo: "متصل بـ",
+            estLatency: "التأخير المقدر",
+            stats: "الإحصائيات",
+            // Footer
+            supportDev: "ادعم المطور",
+            // Modal titles
+            notifications: "الإشعارات",
+            noNotifications: "لا توجد إشعارات جديدة",
+            clearNotifications: "مسح الإشعارات",
+            termsTitle: "شروط الاستخدام",
+            termsAccept: "أوافق",
+            // Instructions
+            wifiStep1: "قم بتوصيل كلا الجهازين بنفس شبكة Wi-Fi.",
+            wifiStep2: "أدخل عنوان IP والمنفذ في التطبيق.",
+            wifiStep3: "ابدأ البث من الهاتف.",
+            wifiStep4: "انقر على بدء الاستماع.",
+            wifiStep5: "استخدم اختصارات الصوت لضبط مستوى الصوت.",
+            usbStep1: "قم بتمكين تصحيح USB (تحقق من تطبيق الهاتف).",
+            usbStep2: "قم بالتوصيل عبر USB واسمح بطلب الاتصال.",
+            usbStep3: "ابدأ البث من الهاتف.",
+            usbStep4: "حدد جهازك وانقر على بدء الاستماع.",
+            usbStep5: "استخدم اختصارات الصوت لضبط مستوى الصوت.",
+            buffer: "المخزن المؤقت",
+            fasterAudio: "صوت أسرع",
+            smootherAudio: "صوت أنعم",
+            androidDevice: "جهاز أندرويد",
+            noDevices: "لم يتم العثور على أجهزة",
+            adbMissing: "أدوات ADB مفقودة",
+        }
+    };
+
+    // Get translation helper
+    const t = (key) => translations[language]?.[key] || translations.en[key] || key;
+
+    // Toggle language
+    const toggleLanguage = () => {
+        const newLang = language === 'en' ? 'ar' : 'en';
+        setLanguage(newLang);
+        localStorage.setItem('app_language', newLang);
+    };
+
+    // Accept terms
+    const acceptTerms = () => {
+        setTermsAccepted(true);
+        localStorage.setItem('terms_accepted', 'true');
+        setIsTermsOpen(false);
+    };
+
+    // Show terms on first launch
+    useEffect(() => {
+        if (!termsAccepted) {
+            setIsTermsOpen(true);
+        }
+    }, []);
     // ... (rest of state)
 
     const [activeMethod, setActiveMethod] = useState('lan');
@@ -916,7 +1090,7 @@ const App = () => {
     };
 
     return (
-        <div className={`h-screen flex flex-col overflow-hidden transition-colors duration-300 font-sans ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'} relative`}>
+        <div dir={language === 'ar' ? 'rtl' : 'ltr'} className={`h-screen flex flex-col overflow-hidden transition-colors duration-300 font-sans ${isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'} relative`}>
 
             {/* --- TOAST NOTIFICATION --- */}
             {/* --- TOAST NOTIFICATION --- */}
@@ -962,7 +1136,7 @@ const App = () => {
                     <div className="p-4 flex-1 flex flex-col min-h-0">
                         <section className="mb-4 flex-shrink-0">
                             <div className="flex items-center justify-between mb-3">
-                                <h1 className="text-xl font-bold tracking-tight">Receiver</h1>
+                                <h1 className="text-xl font-bold tracking-tight">{t('receiver')}</h1>
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={toggleTheme}
@@ -994,9 +1168,9 @@ const App = () => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <Wifi size={18} />
-                                        <span className="font-medium">LAN Network</span>
+                                        <span className="font-medium">{t('lanNetwork')}</span>
                                     </div>
-                                    <ChevronRight size={16} />
+                                    <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
                                 </button>
 
                                 {/* USB Method */}
@@ -1006,9 +1180,9 @@ const App = () => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <Smartphone size={18} />
-                                        <span className="font-medium">USB Tether</span>
+                                        <span className="font-medium">{t('usbTether')}</span>
                                     </div>
-                                    <ChevronRight size={16} />
+                                    <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
                                 </button>
 
                                 {/* Bluetooth Method */}
@@ -1018,9 +1192,9 @@ const App = () => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <Bluetooth size={18} />
-                                        <span className="font-medium">Bluetooth</span>
+                                        <span className="font-medium">{t('bluetooth')}</span>
                                     </div>
-                                    <ChevronRight size={16} />
+                                    <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
                                 </button>
                             </div>
                         </section>
@@ -1430,16 +1604,30 @@ const App = () => {
                 </section >
             </main >
 
-            {/* --- FOOTER SUPPORT BAR --- */}
-            < footer className="h-14 flex items-center justify-center relative" >
+            {/* --- FOOTER BAR --- */}
+            <footer className="h-14 flex items-center justify-between px-4 relative">
+                {/* Language Toggle - Left */}
+                <button
+                    onClick={toggleLanguage}
+                    className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-4 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg`}
+                    title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+                >
+                    <Globe size={14} className="text-blue-500" />
+                    {language === 'en' ? 'English' : 'العربية'}
+                </button>
+
+                {/* Support Button - Center */}
                 <button
                     onClick={() => { setSupportView('info'); setIsSupportOpen(true); }}
-                    className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-6 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg`}
+                    className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-6 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg absolute left-1/2 -translate-x-1/2`}
                 >
                     <Coffee size={14} className="text-amber-500" />
-                    Support the Developer
+                    {t('supportDev')}
                 </button>
-            </footer >
+
+                {/* Empty spacer for balance */}
+                <div className="w-24"></div>
+            </footer>
 
             {/* --- SUPPORT MODAL (Multi-page) --- */}
             <Modal
@@ -1672,6 +1860,83 @@ const App = () => {
                         </button>
                     </div>
                 )}
+            </Modal>
+
+            {/* --- TERMS OF USE MODAL --- */}
+            <Modal
+                isOpen={isTermsOpen}
+                onClose={() => termsAccepted && setIsTermsOpen(false)}
+                title={t('termsTitle')}
+                maxWidth="max-w-lg"
+                isDarkMode={isDarkMode}
+            >
+                <div className={`px-6 py-4 h-[400px] overflow-y-auto custom-scrollbar ${language === 'ar' ? 'text-right' : ''}`}>
+                    <div className={`space-y-4 text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                        <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
+                            <p className={`font-bold ${isDarkMode ? 'text-amber-400' : 'text-amber-700'}`}>
+                                {language === 'ar' ? '⚠️ إخلاء المسؤولية' : '⚠️ Disclaimer'}
+                            </p>
+                        </div>
+
+                        {language === 'ar' ? (
+                            <>
+                                <p>باستخدام AudioSync ("التطبيق")، فإنك توافق على الشروط التالية:</p>
+
+                                <h4 className="font-bold mt-4">1. الاستخدام المقصود</h4>
+                                <p>تم تطوير هذا التطبيق لأغراض مشروعة — بث صوت هاتفك إلى جهاز الكمبيوتر الخاص بك. أي سوء استخدام أو استخدام غير قانوني هو مسؤولية المستخدم بالكامل.</p>
+
+                                <h4 className="font-bold mt-4">2. لا توجد ضمانات</h4>
+                                <p>يتم توفير التطبيق "كما هو" بدون أي ضمان، صريح أو ضمني. لا يضمن المطور أن التطبيق سيعمل دون انقطاع أو خالياً من الأخطاء.</p>
+
+                                <h4 className="font-bold mt-4">3. تحديد المسؤولية</h4>
+                                <p>لن يكون المطور (Kurei) مسؤولاً عن أي أضرار ناتجة عن استخدام هذا التطبيق، بما في ذلك على سبيل المثال لا الحصر:</p>
+                                <ul className="list-disc list-inside space-y-1 opacity-80">
+                                    <li>فقدان البيانات أو تعطل النظام</li>
+                                    <li>مشاكل الاتصال</li>
+                                    <li>أي عواقب غير مقصودة</li>
+                                </ul>
+
+                                <h4 className="font-bold mt-4">4. استخدام على مسؤوليتك الخاصة</h4>
+                                <p>أنت تفهم وتوافق على أنك تستخدم هذا التطبيق على مسؤوليتك الخاصة.</p>
+                            </>
+                        ) : (
+                            <>
+                                <p>By using AudioSync ("the App"), you agree to the following terms:</p>
+
+                                <h4 className="font-bold mt-4">1. Intended Use</h4>
+                                <p>This application was developed for legitimate purposes — streaming your phone's audio to your PC. Any misuse or unlawful usage is solely the responsibility of the user.</p>
+
+                                <h4 className="font-bold mt-4">2. No Warranty</h4>
+                                <p>The App is provided "as is" without any warranty, express or implied. The developer makes no guarantee that the App will work without interruption or be error-free.</p>
+
+                                <h4 className="font-bold mt-4">3. Limitation of Liability</h4>
+                                <p>The developer (Kurei) shall not be liable for any damages arising from the use of this App, including but not limited to:</p>
+                                <ul className="list-disc list-inside space-y-1 opacity-80">
+                                    <li>Data loss or system crashes</li>
+                                    <li>Connectivity issues</li>
+                                    <li>Any unintended consequences</li>
+                                </ul>
+
+                                <h4 className="font-bold mt-4">4. Use at Your Own Risk</h4>
+                                <p>You understand and agree that you use this App at your own risk.</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <div className={`p-6 border-t ${isDarkMode ? 'border-zinc-800' : 'border-zinc-100'}`}>
+                    <button
+                        onClick={acceptTerms}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+                    >
+                        {t('termsAccept')}
+                    </button>
+                    {!termsAccepted && (
+                        <p className={`text-xs text-center mt-2 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                            {language === 'ar' ? 'يجب عليك الموافقة للمتابعة' : 'You must accept to continue'}
+                        </p>
+                    )}
+                </div>
             </Modal>
             <style dangerouslySetInnerHTML={{
                 __html: `
