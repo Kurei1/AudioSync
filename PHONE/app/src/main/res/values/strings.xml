@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AudioStream</string>
-    <string name="app_title">Audio Stream</string>
+    <string name="app_name">AudioSync Streamer</string>
+    <string name="app_title">AudioSync Streamer</string>
     
     <!-- Tab Names -->
     <string name="tab_usb">USB</string>

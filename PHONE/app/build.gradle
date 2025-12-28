@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.audiostream'
+    namespace 'com.kurei.audiosync'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.audiostream"
+        applicationId "com.kurei.audiosync"
         minSdk 29 // Android 10 required for MediaProjection Audio Playback Capture
         targetSdk 34
         versionCode 1

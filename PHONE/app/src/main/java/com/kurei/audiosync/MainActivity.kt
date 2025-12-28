@@ -1,4 +1,4 @@
-package com.example.audiostream
+package com.kurei.audiosync
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator

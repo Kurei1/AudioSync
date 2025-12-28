@@ -1,4 +1,4 @@
-package com.example.audiostream
+package com.kurei.audiosync
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
