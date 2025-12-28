@@ -91,12 +91,12 @@ class ErrorBoundary extends React.Component {
 }
 
 // Reusable Modal Component
-const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth = 'max-w-md' }) => {
+const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth = 'max-w-md', isDarkMode = true }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white dark:bg-zinc-900 w-full ${maxWidth} rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/10`}>
-                <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
+            <div className={`w-full ${maxWidth} rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border ${isDarkMode ? 'bg-zinc-900 border-zinc-700' : 'bg-white border-zinc-200'}`}>
+                <div className={`p-6 border-b flex justify-between items-center ${isDarkMode ? 'border-zinc-800 bg-zinc-900/50' : 'border-zinc-100 bg-zinc-50/50'}`}>
                     <div className="flex items-center gap-3">
                         <h3 className="font-bold text-lg">{title}</h3>
                     </div>
@@ -109,7 +109,7 @@ const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth
                 </div>
                 {children}
                 {action && (
-                    <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30 flex justify-end">
+                    <div className={`p-6 border-t flex justify-end ${isDarkMode ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-100 bg-zinc-50/30'}`}>
                         {action}
                     </div>
                 )}
@@ -1442,11 +1442,12 @@ const App = () => {
             </footer >
 
             {/* --- SUPPORT MODAL (Multi-page) --- */}
-            < Modal
+            <Modal
                 isOpen={isSupportOpen}
                 onClose={() => setIsSupportOpen(false)}
                 title={supportView === 'info' ? "Support AudioSync" : supportView === 'payments' ? "Choose Method" : "Custom Support"}
                 maxWidth="max-w-lg"
+                isDarkMode={isDarkMode}
             >
                 <div className="space-y-5 px-6 py-4">
                     {supportView === 'info' && (
@@ -1588,6 +1589,7 @@ const App = () => {
                 onClose={() => setIsNotificationOpen(false)}
                 title="Notifications"
                 maxWidth="max-w-lg"
+                isDarkMode={isDarkMode}
                 rightAction={(
                     <div className="flex items-center gap-1">
                         <button
@@ -1639,10 +1641,10 @@ const App = () => {
                                             }}
                                             disabled={note.type === 'update' && updateDownloading}
                                             className={`mt-3 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${note.type === 'update' && updateDownloading
-                                                    ? 'bg-blue-400 cursor-wait'
-                                                    : note.type === 'update' && updateReady
-                                                        ? 'bg-green-600 hover:bg-green-700'
-                                                        : 'bg-blue-600 hover:bg-blue-700'
+                                                ? 'bg-blue-400 cursor-wait'
+                                                : note.type === 'update' && updateReady
+                                                    ? 'bg-green-600 hover:bg-green-700'
+                                                    : 'bg-blue-600 hover:bg-blue-700'
                                                 }`}
                                         >
                                             {note.type === 'update'
