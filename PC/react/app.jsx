@@ -163,7 +163,7 @@ const App = () => {
             receivingAudio: "Receiving audio stream...",
             waitingPackets: "Waiting for audio packets...",
             connectPhone: "Connect your phone to the IP below",
-            startListening: "Start Listening",
+            startListening: "Start Service",
             stopListening: "Stop Listening",
             serviceStarted: "Service started",
             serviceStopped: "Service stopped",
@@ -199,9 +199,9 @@ const App = () => {
             usbStep5: "Use the volume shortcuts to adjust the volume.",
             // Bluetooth instructions
             bluetoothStep1: "Enable Bluetooth on both devices.",
-            bluetoothStep2: "Pair your phone with this PC.",
-            bluetoothStep3: "Click Start Listening.",
-            bluetoothStep4: "Start Streaming from the phone.",
+            bluetoothStep2: "Click Start Service.",
+            bluetoothStep3: "Pair your phone with this PC (from your phone).",
+            bluetoothStep4: "",
             buffer: "Buffer",
             fasterAudio: "Faster Audio",
             smootherAudio: "Smoother Audio",
@@ -301,9 +301,9 @@ const App = () => {
             usbStep5: "استخدم اختصارات الصوت لضبط مستوى الصوت.",
             // Bluetooth instructions
             bluetoothStep1: "قم بتشغيل Bluetooth على كلا الجهازين.",
-            bluetoothStep2: "قم بإقران الهاتف مع هذا الكمبيوتر.",
-            bluetoothStep3: "انقر على بدء الخدمة.",
-            bluetoothStep4: "ابدأ البث من الهاتف.",
+            bluetoothStep2: "انقر على بدء الخدمة.",
+            bluetoothStep3: "قم بإقران الهاتف مع هذا الكمبيوتر (من الهاتف).",
+            bluetoothStep4: "",
             bluetoothStep3_Alt: "لا يوجد صوت؟ افصل وأعد الاتصال.",
             bluetoothStep4_Alt: "للتحكم في مستوى الصوت إستعمل أزرار الهاتف",
             bluetoothNote: "Windows لا يدعم هذه الطريقة بشكل أصلي، مما قد يسبب عدم استقرار مؤقت في البلوتوث.",
@@ -481,6 +481,7 @@ const App = () => {
     const [port, setPort] = useState(() => localStorage.getItem('saved_port') || '50005');
     const [bufferValue, setBufferValue] = useState(100);
     const [supportView, setSupportView] = useState('info');
+    const [emailCopied, setEmailCopied] = useState(false);
 
     // Devices
     const [devices, setDevices] = useState([]);
@@ -1619,7 +1620,7 @@ const App = () => {
                                     <Bluetooth size={16} className="text-amber-500" />
                                     <p className="text-sm font-bold text-amber-500">{t('bluetoothExp')}</p>
                                 </div>
-                                <div className={`text-xs text-left space-y-1 ${isDarkMode ? 'text-amber-200/80' : 'text-amber-800/80'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                                <div className={`text-sm ${language === 'ar' ? 'text-right' : 'text-left'} space-y-1 ${isDarkMode ? 'text-amber-200/80' : 'text-amber-800/80'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
                                     <p className={`p-2 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/10' : 'bg-white/50 border-amber-200'}`}>
                                         <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('bluetoothNote')}
                                     </p>
@@ -1627,7 +1628,6 @@ const App = () => {
                                         <li>{t('bluetoothStep1')}</li>
                                         <li>{t('bluetoothStep2')}</li>
                                         <li>{t('bluetoothStep3')}</li>
-                                        <li>{t('bluetoothStep4')}</li>
                                         <li className="mt-1 pt-1 border-t border-amber-500/20">{t('bluetoothStep3_Alt')}</li>
                                         <li>{t('bluetoothStep4_Alt')}</li>
                                     </ol>
@@ -1779,13 +1779,13 @@ const App = () => {
 
                             <button onClick={() => setSupportView('paypal')} className={`w-full p-4 rounded-2xl border flex items-center gap-4 cursor-pointer hover:scale-[1.02] transition-transform ${isDarkMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-zinc-200 bg-zinc-50'}`}>
                                 <div className="w-10 h-10 bg-[#003087] rounded-lg flex items-center justify-center text-white"><CreditCard size={20} /></div>
-                                <div className="flex-1 text-left"><p className="font-bold text-sm">PayPal</p><p className="text-xs opacity-50">{t('paypalDesc')}</p></div>
+                                <div className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}><p className="font-bold text-sm">PayPal</p><p className="text-xs opacity-50">{t('paypalDesc')}</p></div>
                                 <ChevronRight size={18} className={`opacity-50 ${language === 'ar' ? 'rotate-180' : ''}`} />
                             </button>
 
                             <button onClick={() => setSupportView('crypto')} className={`w-full p-4 rounded-2xl border flex items-center gap-4 cursor-pointer hover:scale-[1.02] transition-transform ${isDarkMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-zinc-200 bg-zinc-50'}`}>
                                 <div className="w-10 h-10 bg-[#F3BA2F] rounded-lg flex items-center justify-center text-zinc-900"><QrCode size={20} /></div>
-                                <div className="flex-1 text-left"><p className="font-bold text-sm">Binance / ByBit</p><p className="text-xs opacity-50">{t('cryptoDesc')}</p></div>
+                                <div className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}><p className="font-bold text-sm">Binance / ByBit</p><p className="text-xs opacity-50">{t('cryptoDesc')}</p></div>
                                 <ChevronRight size={18} className={`opacity-50 ${language === 'ar' ? 'rotate-180' : ''}`} />
                             </button>
                         </div>
@@ -1853,12 +1853,26 @@ const App = () => {
                                 <div className="grid grid-cols-1 gap-3">
                                     <a href="https://instagram.com/kurei.111" target="_blank" rel="noreferrer" className={`flex items-center gap-4 p-4 rounded-2xl border transition-transform hover:scale-[1.02] ${isDarkMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-zinc-200 bg-zinc-50'}`}>
                                         <div className="w-10 h-10 bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 rounded-lg flex items-center justify-center text-white"><Instagram size={20} /></div>
-                                        <div className="text-left"><p className="font-bold text-sm">Instagram</p><p className="text-xs opacity-50">@kurei.111</p></div>
+                                        <div className={`${language === 'ar' ? 'text-right' : 'text-left'}`}><p className="font-bold text-sm">Instagram</p><p className="text-xs opacity-50">@kurei.111</p></div>
                                     </a>
-                                    <a href="mailto:audio.sync.2025@gmail.com" className={`flex items-center gap-4 p-4 rounded-2xl border transition-transform hover:scale-[1.02] ${isDarkMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-zinc-200 bg-zinc-50'}`}>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText('audio.sync.2025@gmail.com');
+                                            setEmailCopied(true);
+                                            setTimeout(() => setEmailCopied(false), 2000);
+                                        }}
+                                        className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-transform hover:scale-[1.02] ${isDarkMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-zinc-200 bg-zinc-50'}`}
+                                    >
                                         <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white"><Mail size={20} /></div>
-                                        <div className="text-left"><p className="font-bold text-sm">{t('emailMe')}</p><p className="text-xs opacity-50">audio.sync.2025@gmail.com</p></div>
-                                    </a>
+                                        <div className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                                            <p className="font-bold text-sm">{t('emailMe')}</p>
+                                            <p className={`text-xs opacity-50 ${emailCopied ? 'text-green-500 font-bold' : ''}`}>
+                                                {emailCopied
+                                                    ? (language === 'ar' ? 'تم النسخ!' : 'Copied!')
+                                                    : 'audio.sync.2025@gmail.com'}
+                                            </p>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
                         </div>

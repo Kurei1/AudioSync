@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AudioSync Streamer</string>
+    <string name="app_title">AudioSync Streamer</string>
+    
+    <!-- Tab Names -->
+    <string name="tab_usb">USB</string>
+    <string name="tab_wifi">Wi-Fi</string>
+    <string name="tab_bluetooth">Bluetooth</string>
+    
+    <!-- Input Hints -->
+    <string name="ip_hint">عنوان PC IP (مثال: 192.168.1.10)</string>
+    <string name="port_hint">رقم المنفذ</string>
+    
+    <!-- Buttons -->
+    <string name="start_stream">بدء البث</string>
+    <string name="stop_stream">إيقاف البث</string>
+    <string name="change_language">تغيير اللغة</string>
+    <string name="action_help">مساعدة</string>
+    
+    <!-- Status -->
+    <string name="status_label">الحالة:</string>
+    <string name="status_default">جاهز للبث</string>
+    <string name="status_streaming">جاري البث...</string>
+    <string name="streaming_for">مدة البث: %s</string>
+    
+    <!-- Tab Descriptions -->
+    <string name="wifi_description">بث الصوت عبر شبكة Wi-Fi. تأكد من أن كلا الجهازين على نفس الشبكة.</string>
+    
+    <!-- USB Instructions -->
+    <!-- USB Instructions -->
+    <string name="usb_setup_title">إعداد USB Tethering</string>
+    <string name="usb_instructions">1. تفعيل خيارات المطور (Developer Options):\n   • اذهب إلى الإعدادات (Settings) ← حول الهاتف (About Phone)\n   • اضغط على \"رقم الإصدار\" (Build Number) 7 مرات\n   • سترى \"أنت الآن مطور!\" (You are now a developer)\n\n2. تفعيل USB Debugging:\n   • اذهب إلى الإعدادات ← خيارات المطور\n   • قم بتفعيل \"USB Debugging\"\n\n3. التوصيل وتفعيل Tethering:\n   • صل الهاتف بالكمبيوتر عبر كابل USB\n   • اذهب إلى الإعدادات ← نقطة الاتصال والربط\n   • قم بتفعيل \"USB Tethering\"</string>
+    
+    <!-- Mute Explanation -->
+    <string name="mute_audio">كتم صوت الهاتف</string>
+    <string name="mute_explanation">عند التفعيل، سيتم كتم مكبر صوت هاتفك أثناء البث. سيتم تشغيل الصوت فقط على جهاز الكمبيوتر الخاص بك.</string>
+    
+    <!-- Bluetooth Instructions -->
+    <string name="bluetooth_title">إعداد Bluetooth Audio</string>
+    <string name="bluetooth_instructions">لاستخدام بث الصوت عبر Bluetooth:\n\n1. افتح تطبيق المستقبل على الكمبيوتر\n\n2. انقر على وضع "Bluetooth" في المستقبل\n\n3. سيصبح الكمبيوتر قابلاً للاكتشاف كجهاز صوتي\n\n4. على هاتفك، اذهب إلى الإعدادات (Settings) ← Bluetooth\n\n5. قم بالاقتران مع جهاز المستقبل (الكمبيوتر)\n\n6. قم بتشغيل أي صوت على هاتفك - سيتم بثه إلى الكمبيوتر!</string>
+    <string name="bluetooth_note">ملاحظة: يتطلب وضع Bluetooth تشغيل مستقبل الكمبيوتر في وضع Bluetooth Sink.</string>
+    
+    <!-- Permissions -->
+    <string name="audio_perm_rationale">إذن الصوت مطلوب لبث صوت النظام.</string>
+</resources>

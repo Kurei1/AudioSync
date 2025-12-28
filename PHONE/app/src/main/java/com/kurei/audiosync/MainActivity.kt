@@ -21,6 +21,8 @@ import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import java.util.Locale
+import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -55,8 +57,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var wifiStatusText: TextView
     private lateinit var wifiStreamingTimer: TextView
     
-    // Title
-    private lateinit var titleText: TextView
+    // Header
+    private lateinit var txtVersion: TextView
+    private lateinit var btnHelp: TextView
+    private lateinit var btnLanguage: TextView
     
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private lateinit var sharedPrefs: SharedPreferences
@@ -71,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     private val KEY_WIFI_MUTE = "wifi_mute"
     private val KEY_USB_MUTE = "usb_mute"
     private val KEY_SELECTED_TAB = "selected_tab"
+    private val KEY_LANGUAGE = "app_language"
     
     private val USB_TETHERING_IP = "192.168.42.129"
 
@@ -116,11 +121,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
         
         // Initialize SharedPreferences
         sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         
+        // Apply saved language BEFORE setting content view
+        val savedLang = sharedPrefs.getString(KEY_LANGUAGE, "en") ?: "en"
+        setAppLocale(savedLang)
+
         // Register receiver
         val filter = IntentFilter(AudioCaptureService.ACTION_STOPPED)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -131,21 +139,45 @@ class MainActivity : AppCompatActivity() {
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        
+        // Now set content view
+        setContentView(R.layout.activity_main)
 
         initViews()
-        setupGradientTitle()
         setupTabs()
         setupControls()
         restorePreferences()
+
+        // Setup Header Actions
+        setupHeaderActions(savedLang)
         
         // Restore selected tab
         val savedTab = sharedPrefs.getString(KEY_SELECTED_TAB, "usb") ?: "usb"
         selectTab(savedTab, animate = false)
     }
 
+    private fun setAppLocale(localeCode: String) {
+        val locale = Locale(localeCode)
+        Locale.setDefault(locale)
+        val config = Configuration()
+        config.setLocale(locale)
+        
+        // Ensure standard numbers (ltr) for Arabic if needed, 
+        // usually standard Arabic locale uses standard digits but layout is RTL.
+        if (localeCode == "ar") {
+            config.setLayoutDirection(locale)
+        } else {
+            config.setLayoutDirection(Locale.ENGLISH)
+        }
+
+        baseContext.resources.updateConfiguration(config, baseContext.resources.displayMetrics)
+    }
+
     private fun initViews() {
-        // Title
-        titleText = findViewById(R.id.titleText)
+        // Header
+        txtVersion = findViewById(R.id.txtVersion)
+        btnHelp = findViewById(R.id.btnHelp)
+        btnLanguage = findViewById(R.id.btnLanguage)
         
         // Tabs
         tabUsb = findViewById(R.id.tabUsb)
@@ -173,21 +205,40 @@ class MainActivity : AppCompatActivity() {
         wifiStreamingTimer = findViewById(R.id.wifiStreamingTimer)
     }
     
-    private fun setupGradientTitle() {
-        titleText.post {
-            val paint = titleText.paint
-            val width = paint.measureText(titleText.text.toString())
-            val shader = LinearGradient(
-                0f, 0f, width, 0f,
-                intArrayOf(
-                    ContextCompat.getColor(this, R.color.gradient_start),
-                    ContextCompat.getColor(this, R.color.gradient_end)
-                ),
-                null,
-                Shader.TileMode.CLAMP
-            )
-            titleText.paint.shader = shader
-            titleText.invalidate()
+    private fun setupHeaderActions(savedLang: String) {
+        // Version
+        try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            txtVersion.text = "v${packageInfo.versionName}"
+        } catch (e: Exception) {
+            txtVersion.text = "v1.1"
+        }
+
+        // Help Button
+        btnHelp.setOnClickListener {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = android.net.Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("audio.sync.2025@gmail.com"))
+                putExtra(Intent.EXTRA_SUBJECT, "AudioSync Android Support")
+            }
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Language Button
+        btnLanguage.setOnClickListener {
+            val currentLang = sharedPrefs.getString(KEY_LANGUAGE, "en") ?: "en"
+            val newLang = if (currentLang == "en") "ar" else "en"
+            
+            // Save new language
+            sharedPrefs.edit().putString(KEY_LANGUAGE, newLang).apply()
+            
+            // Apply and recreate
+            setAppLocale(newLang)
+            recreate()
         }
     }
     

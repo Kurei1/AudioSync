@@ -15,6 +15,8 @@
     <!-- Buttons -->
     <string name="start_stream">Start Streaming</string>
     <string name="stop_stream">Stop Streaming</string>
+    <string name="change_language">Change Language</string>
+    <string name="action_help">Help</string>
     
     <!-- Status -->
     <string name="status_label">Status:</string>
@@ -35,7 +37,7 @@
     
     <!-- Bluetooth Instructions -->
     <string name="bluetooth_title">Bluetooth Audio Setup</string>
-    <string name="bluetooth_instructions">To use Bluetooth audio streaming:\n\n1. Open the PC receiver application\n\n2. Click on \"Bluetooth\" mode in the receiver\n\n3. The PC will become discoverable as an audio device\n\n4. On your phone, go to Settings → Bluetooth\n\n5. Pair with the PC receiver device\n\n6. Select it as your audio output device\n\n7. Play any audio on your phone - it will stream to PC!</string>
+    <string name="bluetooth_instructions">To use Bluetooth audio streaming:\n\n1. Open the PC receiver application\n\n2. Click on "Bluetooth" mode in the receiver\n\n3. The PC will become discoverable as an audio device\n\n4. On your phone, go to Settings → Bluetooth\n\n5. Pair with the PC receiver device\n\n6. Play any audio on your phone - it will stream to PC!</string>
     <string name="bluetooth_note">Note: Bluetooth mode requires the PC receiver to be running in Bluetooth sink mode. This provides system-wide audio streaming without needing this app to capture audio.</string>
     
     <!-- Permissions -->
