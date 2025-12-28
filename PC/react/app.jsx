@@ -216,7 +216,7 @@ const App = () => {
             // Bluetooth warning
             bluetoothNote: "Windows does not natively support this method, which may cause temporary Bluetooth instability.",
             bluetoothStep3_Alt: "No Sound? Disconnect and connect again.",
-            bluetoothStep4_Alt: "Volume: Control via phone.",
+            bluetoothStep4_Alt: "Use phone buttons to control volume.",
             // Stats status
             active: "Active",
             idle: "Idle",
@@ -289,7 +289,7 @@ const App = () => {
             bluetoothStep3: "انقر على بدء الخدمة.",
             bluetoothStep4: "ابدأ البث من الهاتف.",
             bluetoothStep3_Alt: "لا يوجد صوت؟ افصل وأعد الاتصال.",
-            bluetoothStep4_Alt: "المستوى: التحكم عبر الهاتف.",
+            bluetoothStep4_Alt: "للتحكم في مستوى الصوت إستعمل أزرار الهاتف",
             bluetoothNote: "Windows لا يدعم هذه الطريقة بشكل أصلي، مما قد يسبب عدم استقرار مؤقت في البلوتوث.",
             // Buffer - keep in English
             buffer: "Buffer",
