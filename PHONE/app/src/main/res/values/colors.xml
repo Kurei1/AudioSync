@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- New Dark Navy Theme -->
+    <color name="dark_background">#0D1B2A</color>
+    <color name="dark_surface">#1B2838</color>
+    <color name="dark_card">#243447</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#00C853</color>
+    <color name="gradient_end">#00BCD4</color>
+    
+    <!-- Tab Colors -->
+    <color name="tab_active">#00B4D8</color>
+    <color name="tab_inactive_text">#8899A6</color>
+    <color name="tab_container">#1B2838</color>
+    
+    <!-- Primary/Secondary -->
+    <color name="primary">#00B4D8</color>
+    <color name="primary_variant">#0077B6</color>
+    <color name="secondary">#00C853</color>
+    
+    <!-- Status Colors -->
+    <color name="error">#CF6679</color>
+    <color name="success">#00C853</color>
+    
+    <!-- Input Colors -->
+    <color name="input_background">#1B2838</color>
+    <color name="input_stroke">#2D3E50</color>
+    <color name="hint_color">#5C6E7F</color>
+</resources>

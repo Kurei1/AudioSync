@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AudioStream</string>
+    <string name="app_title">Audio Stream</string>
+    
+    <!-- Tab Names -->
+    <string name="tab_usb">USB</string>
+    <string name="tab_wifi">WiFi</string>
+    <string name="tab_bluetooth">Bluetooth</string>
+    
+    <!-- Input Hints -->
+    <string name="ip_hint">PC IP Address (e.g., 192.168.1.10)</string>
+    <string name="port_hint">Port number</string>
+    
+    <!-- Buttons -->
+    <string name="start_stream">Start Streaming</string>
+    <string name="stop_stream">Stop Streaming</string>
+    
+    <!-- Status -->
+    <string name="status_label">Status:</string>
+    <string name="status_default">Ready to stream</string>
+    <string name="status_streaming">Streaming...</string>
+    <string name="streaming_for">Streaming for: %s</string>
+    
+    <!-- Tab Descriptions -->
+    <string name="wifi_description">Stream audio over WiFi. Make sure both devices are on the same network.</string>
+    
+    <!-- USB Instructions -->
+    <string name="usb_setup_title">USB Tethering Setup</string>
+    <string name="usb_instructions">1. Enable Developer Options:\n   • Go to Settings → About Phone\n   • Tap \"Build Number\" 7 times\n   • You\'ll see \"Developer mode enabled\"\n\n2. Enable USB Debugging:\n   • Go to Settings → Developer Options\n   • Enable \"USB Debugging\"\n\n3. Connect &amp; Enable Tethering:\n   • Connect phone to PC via USB cable\n   • Go to Settings → Hotspot &amp; Tethering\n   • Enable \"USB Tethering\"</string>
+    
+    <!-- Mute Explanation -->
+    <string name="mute_audio">Mute phone audio</string>
+    <string name="mute_explanation">When enabled, your phone\'s speaker will be silenced while streaming. Audio will only play on your PC, avoiding echo and duplicate sound.</string>
+    
+    <!-- Bluetooth Instructions -->
+    <string name="bluetooth_title">Bluetooth Audio Setup</string>
+    <string name="bluetooth_instructions">To use Bluetooth audio streaming:\n\n1. Open the PC receiver application\n\n2. Click on \"Bluetooth\" mode in the receiver\n\n3. The PC will become discoverable as an audio device\n\n4. On your phone, go to Settings → Bluetooth\n\n5. Pair with the PC receiver device\n\n6. Select it as your audio output device\n\n7. Play any audio on your phone - it will stream to PC!</string>
+    <string name="bluetooth_note">Note: Bluetooth mode requires the PC receiver to be running in Bluetooth sink mode. This provides system-wide audio streaming without needing this app to capture audio.</string>
+    
+    <!-- Permissions -->
+    <string name="audio_perm_rationale">Audio permission is required to stream system sound.</string>
+</resources>

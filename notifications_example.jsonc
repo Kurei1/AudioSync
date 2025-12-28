@@ -1,0 +1,98 @@
+// ============================================================
+// AudioSync Notifications Format Example
+// ============================================================
+// This file shows all notification types you can push to users.
+// Save your actual notifications as: notifications.json (without comments)
+// Host at: https://raw.githubusercontent.com/Kurei1/app-notification/main/notifications.json
+// ============================================================
+[
+    // ----------------------------------------------------------
+    // TYPE: "update" - In-App Update Notification
+    // ----------------------------------------------------------
+    // - Triggers electron-updater delta download (small size!)
+    // - Button shows progress % while downloading
+    // - Changes to "Restart to Install" when ready
+    // - NO link needed - uses in-app updater
+    {
+        "id": "update_v1.1",
+        "title": "New Version Available",
+        "message": "AudioSync v1.1.0 is now available! Performance improvements and bug fixes.",
+        "type": "update",
+        "action": "Download Now"
+    },
+    // ----------------------------------------------------------
+    // TYPE: "info" with action - Clickable Info Notification
+    // ----------------------------------------------------------
+    // - Shows info with a button that opens a link
+    // - Good for: release notes, social links, announcements
+    {
+        "id": "update_v1.1_changelog",
+        "title": "What's New in v1.1.0",
+        "message": "Check out the full changelog and release notes.",
+        "type": "info",
+        "action": "View Details",
+        "link": "https://github.com/Kurei1/AudioSync/releases/tag/v1.1.0"
+    },
+    // ----------------------------------------------------------
+    // TYPE: "info" without action - Simple Info Notification
+    // ----------------------------------------------------------
+    // - Just displays a message, no button
+    // - Good for: welcome messages, tips, announcements
+    {
+        "id": "welcome_v1",
+        "title": "Welcome to AudioSync",
+        "message": "Your audio receiver is ready. Connect your phone to start streaming!",
+        "type": "info"
+    },
+    // ----------------------------------------------------------
+    // TYPE: "info" - Pro Tips
+    // ----------------------------------------------------------
+    // - Helpful tips for users
+    {
+        "id": "tip_buffer",
+        "title": "Pro Tip: Buffer Settings",
+        "message": "Lower buffer = less latency but may cause audio glitches. Try 50-100ms for best balance.",
+        "type": "info"
+    },
+    // ----------------------------------------------------------
+    // TYPE: "info" - Social/Support Links
+    // ----------------------------------------------------------
+    {
+        "id": "social_instagram",
+        "title": "Follow for Updates",
+        "message": "Stay updated with new features and announcements.",
+        "type": "info",
+        "action": "Follow on Instagram",
+        "link": "https://instagram.com/kurei.111"
+    },
+    // ----------------------------------------------------------
+    // TYPE: "info" - Support/Donation
+    // ----------------------------------------------------------
+    {
+        "id": "support_dev",
+        "title": "Support the Developer",
+        "message": "AudioSync is free and open source. Consider supporting if you find it useful!",
+        "type": "info",
+        "action": "Support",
+        "link": "https://github.com/Kurei1/AudioSync#support"
+    }
+]
+// ============================================================
+// NOTES:
+// ============================================================
+// 
+// Required fields:
+//   - id: Unique identifier (once dismissed, won't show again)
+//   - title: Notification title
+//   - message: Notification body text
+//   - type: "update" or "info"
+//
+// Optional fields:
+//   - action: Button text (if omitted, no button shown)
+//   - link: URL to open (only for type: "info")
+//
+// ID Tips:
+//   - Use versioned IDs for updates: "update_v1.1", "update_v1.2"
+//   - This prevents the same notification from showing again
+//   - Users who dismissed "update_v1.1" will still see "update_v1.2"
+// ============================================================

@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build outputs
+PC/react/dist/
+PC/react/dist-electron/
+PHONE/app/build/
+PHONE/build/
+*.apk
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# System
+.DS_Store
+Thumbs.db
+
+# Local config (don't share)
+local.properties
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Gradle
+.gradle/
+PHONE/.gradle/
