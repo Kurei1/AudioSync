@@ -128,6 +128,12 @@ Makes your PC act as a Bluetooth speaker. Your phone sends audio directly via Bl
 
 ---
 
+## From the Developer
+
+> Hello there, I just wanted to leave this message so you know exactly what this is. This is a project that I have worked on in 4 days. It's fully using an AI agent. Also, I want to note that I have no idea how to code (I don't even know Python), so there might be some mistakes in the project that I wouldn't notice. For the people who want to build projects out there but don't know the language, take me as an example—all I know is a little bit of English (I even asked the AI agent to correct my message: "Do not change it, just correct my grammar and spelling mistakes"). You don't need to know much to do something; just start and seek for alternatives and workarounds. Thank you for listening. — Kurei
+
+---
+
 ## Support the Developer
 
 AudioSync is free and open source. If you find it useful, consider supporting:
