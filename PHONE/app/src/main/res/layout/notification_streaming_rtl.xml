@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:layoutDirection="rtl"
     android:padding="12dp">
 
     <!-- Title row -->
@@ -46,7 +47,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:gravity="start">
+        android:gravity="right">
 
         <LinearLayout
             android:id="@+id/stop_button_container"

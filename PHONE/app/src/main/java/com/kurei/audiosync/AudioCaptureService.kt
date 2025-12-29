@@ -39,6 +39,7 @@ class AudioCaptureService : Service() {
         const val EXTRA_DATA = "EXTRA_DATA"
         const val EXTRA_IP = "EXTRA_IP"
         const val EXTRA_PORT = "EXTRA_PORT"
+        const val EXTRA_MUTE_AUDIO = "EXTRA_MUTE_AUDIO"
         private const val CHANNEL_ID = "AudioStreamChannel"
         private const val NOTIFICATION_ID = 1
     }
@@ -61,6 +62,9 @@ class AudioCaptureService : Service() {
     private var streamingStartTime: Long = 0
     private var targetIp: String = ""
     private var targetPort: Int = 0
+    private var audioManager: android.media.AudioManager? = null
+    private var initialVolume: Int = -1
+    
     
     private val notificationUpdateRunnable = object : Runnable {
         override fun run() {
@@ -73,6 +77,16 @@ class AudioCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // Apply saved locale to ensure notification is translated and uses Western digits
+        val prefs = getSharedPreferences("AudioStreamPrefs", Context.MODE_PRIVATE)
+        val lang = prefs.getString("app_language", "en") ?: "en"
+        val locale = if (lang == "ar") java.util.Locale("ar", "MA") else java.util.Locale(lang)
+        java.util.Locale.setDefault(locale)
+        val config = android.content.res.Configuration()
+        config.setLocale(locale)
+        resources.updateConfiguration(config, resources.displayMetrics)
+
         createNotificationChannel()
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
@@ -88,6 +102,27 @@ class AudioCaptureService : Service() {
                 targetIp = ip
                 targetPort = port
                 streamingStartTime = System.currentTimeMillis()
+
+                // Volume Logic
+                val shouldMute = intent.getBooleanExtra(EXTRA_MUTE_AUDIO, false)
+    // In Companion Object or top level, reusing existing TAG string if present or creating new one
+    // But since I'm replacing blocks, I'll use "AudioCaptureService" string directly for logs to match existing pattern
+
+                if (shouldMute) {
+                    audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                    initialVolume = audioManager?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: -1
+                    
+                    if (initialVolume != -1) {
+                        val prefs = getSharedPreferences("AudioStreamPrefs", Context.MODE_PRIVATE)
+                        prefs.edit().putInt("saved_volume", initialVolume).apply()
+                    }
+                    try {
+                        audioManager?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, 0, 0)
+                    } catch (e: Exception) {
+                        // Ignore mute errors
+                    }
+                }
+
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     val notification = createNotification()
@@ -106,6 +141,7 @@ class AudioCaptureService : Service() {
                 }
             }
             ACTION_STOP -> {
+                Log.d("AudioCaptureService", "Received ACTION_STOP")
                 stopCapture()
                 notificationHandler.removeCallbacks(notificationUpdateRunnable)
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -180,6 +216,27 @@ class AudioCaptureService : Service() {
         audioRecord = null
         networkSender = null
 
+        // Restore Volume if needed
+        val prefs = getSharedPreferences("AudioStreamPrefs", Context.MODE_PRIVATE)
+        val prefVol = prefs.getInt("saved_volume", -1)
+        val volToRestore = if (initialVolume != -1) initialVolume else prefVol
+
+        if (volToRestore != -1) {
+             if (audioManager == null) {
+                 audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+             }
+             try {
+                 audioManager?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, volToRestore, 0)
+             } catch (e: Exception) {
+                 // Ignore restore errors
+             }
+             // Fallback for MainActivity
+             prefs.edit().putInt("volume_to_restore", volToRestore).apply()
+             prefs.edit().remove("saved_volume").apply()
+        }
+        initialVolume = -1
+
+
         // Broadcast stop event
         val broadcastIntent = Intent(ACTION_STOPPED)
         broadcastIntent.setPackage(packageName)
@@ -247,10 +304,18 @@ class AudioCaptureService : Service() {
         )
 
         // Create custom notification view
-        val customView = RemoteViews(packageName, R.layout.notification_streaming)
-        customView.setTextViewText(R.id.notification_title, "🎵 Audio Stream Active")
-        customView.setTextViewText(R.id.notification_content, "Streaming to $targetIp:$targetPort")
+        // Create custom notification view based on language
+        val prefs = getSharedPreferences("AudioStreamPrefs", Context.MODE_PRIVATE)
+        val lang = prefs.getString("app_language", "en") ?: "en"
+        val layoutId = if (lang == "ar") R.layout.notification_streaming_rtl else R.layout.notification_streaming_ltr
+        
+        val customView = RemoteViews(packageName, layoutId)
+        customView.setTextViewText(R.id.notification_title, getString(R.string.notif_active))
+        customView.setTextViewText(R.id.notification_content, getString(R.string.notif_streaming_to, targetIp, targetPort))
         customView.setTextViewText(R.id.notification_timer, timeString)
+        // Explicitly set stop button text to ensure localization
+        customView.setTextViewText(R.id.btn_stop_text, getString(R.string.stop_stream))
+        
         customView.setOnClickPendingIntent(R.id.stop_button_container, pendingStopIntent)
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -258,6 +323,7 @@ class AudioCaptureService : Service() {
             .setColor(Color.parseColor("#00B4D8"))
             .setColorized(true)
             .setOngoing(true)
+            .setAutoCancel(false)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

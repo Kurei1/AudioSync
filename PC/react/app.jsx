@@ -156,8 +156,8 @@ const App = () => {
             volumeDown: "Volume Down",
             muteUnmute: "Mute / Unmute",
             // Status
-            readyToConnect: "Ready to Connect",
-            receiverActive: "Receiver Active",
+            readyToConnect: "Disconnected",
+            receiverActive: "Connected",
             connecting: "Connecting...",
             connectionFailed: "Connection Failed",
             receivingAudio: "Receiving audio stream...",
@@ -170,6 +170,11 @@ const App = () => {
             // Info panels
             wifiReceiver: "Wi-Fi Audio Receiver",
             usbBridge: "USB Audio Bridge",
+            usbTunnelActive: "USB Tunnel Active",
+            usbSetupFailed: "USB Setup Failed",
+            disconnectedStopStream: "Disconnected, make sure to stop streaming from your phone",
+            deviceDisconnected: "Device Disconnected",
+            connectDeviceFirst: "Connect your device first",
             bluetoothExp: "Bluetooth A2DP (Experimental)",
             // Stats
             deviceIP: "Device IP",
@@ -244,6 +249,7 @@ const App = () => {
             restartToInstall: "Restart to Install",
             downloadUpdate: "Download Update",
             updated: "Updated",
+            couldNotReceiveData: "Could not receive any data.",
         },
         ar: {
             // Title bar
@@ -263,8 +269,8 @@ const App = () => {
             volumeDown: "خفض الصوت",
             muteUnmute: "كتم / إلغاء الكتم",
             // Status
-            readyToConnect: "جاهز للاتصال",
-            receiverActive: "المستقبل نشط",
+            readyToConnect: "غير متصل",
+            receiverActive: "متصل",
             connecting: "جاري الاتصال...",
             connectionFailed: "فشل الاتصال",
             receivingAudio: "جاري استقبال البث...",
@@ -277,6 +283,11 @@ const App = () => {
             // Info panels
             wifiReceiver: "مستقبل صوت Wi-Fi",
             usbBridge: "جسر صوت USB",
+            usbTunnelActive: "نفق USB نشط",
+            usbSetupFailed: "فشل إعداد USB",
+            disconnectedStopStream: "غير متصل، تأكد من إيقاف البث من هاتفك",
+            deviceDisconnected: "انقطع اتصال الجهاز",
+            connectDeviceFirst: "قم بتوصيل جهازك أولاً",
             bluetoothExp: "بلوتوث A2DP (تجريبي)",
             // Stats
             deviceIP: "عنوان IP",
@@ -350,6 +361,7 @@ const App = () => {
             restartToInstall: "أعد التشغيل للتثبيت",
             downloadUpdate: "تنزيل التحديث",
             updated: "محّدث",
+            couldNotReceiveData: "تعذر استقبال البيانات.",
         }
     };
 
@@ -934,16 +946,16 @@ const App = () => {
         if (reason === 'manual') {
             // User clicked Stop
             if (activeMethod === 'bluetooth') {
-                showToast("Service stopped", "error");
+                showToast(t('serviceStopped'), "error");
                 playSound('error');
             } else {
                 // LAN / USB manual stop
-                showToast("Disconnected, make sure to stop streaming from your phone", "error", 4000);
+                showToast(t('disconnectedStopStream'), "error", 4000);
                 playSound('error'); // disc.mp3
             }
         } else if (reason === 'auto') {
             // Stream was lost (phone stopped streaming)
-            showToast("Device Disconnected", "error");
+            showToast(t('deviceDisconnected'), "error");
             playSound('error'); // disc.mp3
         } else if (reason === 'failed') {
             // Connection timed out (handled in toggleConnection's timeout, but safety here)
@@ -980,12 +992,12 @@ const App = () => {
             // USB PRE-FLIGHT CHECK
             if (activeMethod === 'usb') {
                 if (adbStatus === 'missing') {
-                    showToast("Connect your device first", "error");
+                    showToast(t('connectDeviceFirst'), "error");
                     playSound('warning');
                     return;
                 }
                 if (!selectedUsbDevice) {
-                    showToast("Connect your device first", "error");
+                    showToast(t('connectDeviceFirst'), "error");
                     playSound('warning');
                     return;
                 }
@@ -1005,7 +1017,7 @@ const App = () => {
                 setConnectionState('connected');
                 connectionStateRef.current = 'connected';
                 setIsConnected(true);
-                showToast("Service started", "success");
+                showToast(t('serviceStarted'), "success");
                 playSound('success');
                 return;
             }
@@ -1040,7 +1052,7 @@ const App = () => {
                     }
                     setConnectionState('failed');
                     connectionStateRef.current = 'failed';
-                    showToast("Connection Failed", "error");
+                    showToast(t('connectionFailed'), "error");
                     playSound('failed');
                     setTimeout(() => {
                         if (connectionStateRef.current === 'failed') {
@@ -1102,7 +1114,7 @@ const App = () => {
             setIsRefreshing(false); // Stop spinner
             if (res.error.includes('missing')) {
                 setAdbStatus('missing');
-                showToast("ADB Tools missing", "error");
+                showToast(t('adbMissing'), "error");
             } else {
                 setAdbStatus('error');
                 console.error("ADB Error:", res.error);
@@ -1161,10 +1173,10 @@ const App = () => {
         const res = await window.electronAPI.adbCommand(['-s', selectedUsbDevice, 'reverse', `tcp:${p}`, `tcp:${p}`]);
 
         if (res.success) {
-            showToast("USB Tunnel Active", "success");
+            showToast(t('usbTunnelActive'), "success");
             return true;
         } else {
-            showToast("USB Setup Failed", "error");
+            showToast(t('usbSetupFailed'), "error");
             console.error(res.error);
             return false;
         }
@@ -1305,7 +1317,8 @@ const App = () => {
                             <div className="space-y-2">
                                 <button
                                     onClick={() => setActiveMethod('lan')}
-                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'lan' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'}`}
+                                    disabled={connectionState !== 'idle'}
+                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'lan' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Wifi size={18} />
@@ -1317,7 +1330,8 @@ const App = () => {
                                 {/* USB Method */}
                                 <button
                                     onClick={() => setActiveMethod('usb')}
-                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'usb' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'}`}
+                                    disabled={connectionState !== 'idle'}
+                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'usb' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Smartphone size={18} />
@@ -1329,7 +1343,8 @@ const App = () => {
                                 {/* Bluetooth Method */}
                                 <button
                                     onClick={() => setActiveMethod('bluetooth')}
-                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'bluetooth' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'}`}
+                                    disabled={connectionState !== 'idle'}
+                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'bluetooth' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Bluetooth size={18} />
@@ -1515,14 +1530,14 @@ const App = () => {
                                     <p className={`text-sm mt-1 ${connectionState !== 'idle' ? 'text-white/80' : 'opacity-60'}`}>
                                         {connectionState === 'connected' ? (activeMethod === 'bluetooth' ? t('serviceStarted') : t('receivingAudio')) :
                                             connectionState === 'connecting' ? t('waitingPackets') :
-                                                connectionState === 'failed' ? (language === 'ar' ? 'تعذر استقبال البيانات.' : 'Could not receive any data.') :
+                                                connectionState === 'failed' ? t('couldNotReceiveData') :
                                                     (activeMethod === 'bluetooth' ? t('serviceStopped') : t('connectPhone'))}
                                     </p>
                                 </div>
                                 <button
                                     onClick={toggleConnection}
                                     disabled={connectionState === 'connecting' || connectionState === 'failed' || (activeMethod === 'bluetooth' && cooldownSeconds > 0)}
-                                    className={`px-6 py-2 rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:opacity-70 disabled:cursor-not-allowed ${connectionState === 'connected' ? 'bg-white text-blue-600 shadow-xl' :
+                                    className={`px-6 py-2 rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:opacity-70 disabled:cursor-not-allowed ${connectionState === 'connected' ? 'bg-red-500 text-white shadow-xl hover:bg-red-600' :
                                         connectionState === 'connecting' ? 'bg-white/20 text-white cursor-wait' :
                                             connectionState === 'failed' ? 'bg-white/20 text-white' :
                                                 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'

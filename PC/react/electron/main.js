@@ -436,9 +436,14 @@ ipcMain.on('update-shortcuts', (event, shortcuts) => {
 
 
 // ===================== BLUETOOTH SERVICE =====================
-// Uses EXACT same script as readnowrite/test.py
+// Uses bluetooth_receiver.py for A2DP sink functionality
 
-const bluetoothScriptPath = path.resolve(__dirname, '../../pc_receiver/readnowrite/test.py');
+let bluetoothScriptPath;
+if (app.isPackaged) {
+    bluetoothScriptPath = path.join(process.resourcesPath, 'pc_receiver', 'bluetooth_receiver.py');
+} else {
+    bluetoothScriptPath = path.resolve(__dirname, '../../pc_receiver/bluetooth_receiver.py');
+}
 
 ipcMain.handle('bluetooth-start', async () => {
     // If already running, do nothing

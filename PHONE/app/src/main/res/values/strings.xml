@@ -14,7 +14,11 @@
     
     <!-- Buttons -->
     <string name="start_stream">Start Streaming</string>
-    <string name="stop_stream">Stop Streaming</string>
+    <string name="stop_stream">Stop Stream</string>
+    <string name="perm_required">Permission Required</string>
+    <string name="perm_write_settings_desc">To restore volume automatically when streaming stops, please allow this app to modify system settings.</string>
+    <string name="grant">Grant</string>
+    <string name="cancel">Cancel</string>
     <string name="change_language">Change Language</string>
     <string name="action_help">Help</string>
     
@@ -42,4 +46,7 @@
     
     <!-- Permissions -->
     <string name="audio_perm_rationale">Audio permission is required to stream system sound.</string>
+    <!-- Notifications -->
+    <string name="notif_active">🎵 Audio Stream Active</string>
+    <string name="notif_streaming_to">Streaming to %1$s:%2$d</string>
 </resources>

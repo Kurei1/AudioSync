@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat
 import android.media.AudioManager
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
+import android.text.method.DigitsKeyListener
 
 class MainActivity : AppCompatActivity() {
 
@@ -80,7 +81,6 @@ class MainActivity : AppCompatActivity() {
     private val USB_TETHERING_IP = "192.168.42.129"
 
     private lateinit var audioManager: AudioManager
-    private var savedVolume: Int = -1
 
     private var isStreaming = false
     private var currentMode = "usb" // "usb", "wifi", or "bluetooth"
@@ -156,8 +156,27 @@ class MainActivity : AppCompatActivity() {
         selectTab(savedTab, animate = false)
     }
 
+    override fun onResume() {
+        super.onResume()
+        
+        // Fallback: Restore volume from foreground if service couldn't
+        val prefs = getSharedPreferences("AudioStreamPrefs", Context.MODE_PRIVATE)
+        val volToRestore = prefs.getInt("volume_to_restore", -1)
+        if (volToRestore != -1) {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            try {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volToRestore, 0)
+            } catch (e: Exception) {
+                // Ignore errors
+            }
+            prefs.edit().remove("volume_to_restore").apply()
+        }
+    }
+
+
     private fun setAppLocale(localeCode: String) {
-        val locale = Locale(localeCode)
+        // Use Morocco (MA) for Arabic to force Western digits (0123) instead of Eastern (١٢٣)
+        val locale = if (localeCode == "ar") Locale("ar", "MA") else Locale(localeCode)
         Locale.setDefault(locale)
         val config = Configuration()
         config.setLocale(locale)
@@ -196,8 +215,12 @@ class MainActivity : AppCompatActivity() {
         usbStatusText = findViewById(R.id.usbStatusText)
         usbStreamingTimer = findViewById(R.id.usbStreamingTimer)
         
+
         // WiFi controls
         wifiIpInput = findViewById(R.id.wifiIpInput)
+        // Force digits and dot, allowing multiple dots (overriding numberDecimal single-dot restriction)
+        wifiIpInput.keyListener = DigitsKeyListener.getInstance("0123456789.")
+        
         wifiPortInput = findViewById(R.id.wifiPortInput)
         wifiMuteCheckbox = findViewById(R.id.wifiMuteCheckbox)
         wifiStartBtn = findViewById(R.id.wifiStartBtn)
@@ -540,8 +563,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (shouldMute) {
-            savedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+             // Muting handled by service now
         }
 
         val serviceIntent = Intent(this, AudioCaptureService::class.java).apply {
@@ -550,6 +572,7 @@ class MainActivity : AppCompatActivity() {
             putExtra(AudioCaptureService.EXTRA_DATA, data)
             putExtra(AudioCaptureService.EXTRA_IP, ip)
             putExtra(AudioCaptureService.EXTRA_PORT, port)
+            putExtra(AudioCaptureService.EXTRA_MUTE_AUDIO, shouldMute)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -573,13 +596,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleServiceStopped() {
-        if (savedVolume != -1) {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, savedVolume, 0)
-            savedVolume = -1
-        }
-        
         isStreaming = false
         timerHandler.removeCallbacks(timerRunnable)
+        
+        // Restore volume from SharedPreferences (fallback for background restriction)
+        val prefs = getSharedPreferences("AudioStreamPrefs", Context.MODE_PRIVATE)
+        val volToRestore = prefs.getInt("volume_to_restore", -1)
+        if (volToRestore != -1) {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            try {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volToRestore, 0)
+            } catch (e: Exception) {
+                // Ignore errors
+            }
+            prefs.edit().remove("volume_to_restore").apply()
+        }
+        
         updateUI()
     }
 

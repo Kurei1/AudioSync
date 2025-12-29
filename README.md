@@ -92,6 +92,37 @@ cd PHONE
 
 ---
 
+## Connection Methods
+
+### 📶 Wi-Fi (LAN)
+Stream audio over your local network. Both devices must be on the same Wi-Fi.
+- **Latency:** ~50-100ms
+- **Requirements:** Both devices on same network
+
+### 🔌 USB Tether
+Ultra-low latency via USB debugging (ADB).
+- **Latency:** ~20-50ms
+- **Requirements:** USB cable, USB debugging enabled on phone
+
+### 🔵 Bluetooth A2DP (Experimental)
+Makes your PC act as a Bluetooth speaker. Your phone sends audio directly via Bluetooth.
+- **Latency:** ~100-200ms
+- **Requirements:** Bluetooth on both devices, `winsdk` and `pyaudio` Python packages
+- **No Android app needed** - just pair and play!
+
+#### How Bluetooth Mode Works:
+1. Click "Start Service" on the PC app's Bluetooth tab
+2. Your PC becomes discoverable as a Bluetooth audio device
+3. Pair your phone with the PC from your phone's Bluetooth settings
+4. Play audio on your phone - it streams to your PC!
+
+#### ⚠️ Bluetooth Notes:
+- Windows does not natively support A2DP sink mode, so this is experimental
+- If Bluetooth behaves incorrectly after stopping, restart your PC
+- Use your phone's volume buttons to control audio level
+
+---
+
 ## Support the Developer
 
 AudioSync is free and open source. If you find it useful, consider supporting:

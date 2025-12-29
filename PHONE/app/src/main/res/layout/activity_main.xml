@@ -245,7 +245,7 @@
                     android:layout_height="56dp"
                     android:background="@drawable/input_background"
                     android:hint="@string/ip_hint"
-                    android:inputType="text"
+                    android:inputType="numberDecimal"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
                     android:textColor="@color/white"

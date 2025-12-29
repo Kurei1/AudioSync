@@ -15,6 +15,10 @@
     <!-- Buttons -->
     <string name="start_stream">بدء البث</string>
     <string name="stop_stream">إيقاف البث</string>
+    <string name="perm_required">إذن مطلوب</string>
+    <string name="perm_write_settings_desc">لاستعادة مستوى الصوت تلقائيًا عند إيقاف البث، يرجى السماح لهذا التطبيق بتعديل إعدادات النظام.</string>
+    <string name="grant">منح</string>
+    <string name="cancel">إلغاء</string>
     <string name="change_language">تغيير اللغة</string>
     <string name="action_help">مساعدة</string>
     
@@ -43,4 +47,7 @@
     
     <!-- Permissions -->
     <string name="audio_perm_rationale">إذن الصوت مطلوب لبث صوت النظام.</string>
+    <!-- Notifications -->
+    <string name="notif_active">🎵 البث الصوتي نشط</string>
+    <string name="notif_streaming_to">جاري البث إلى %1$s:%2$d</string>
 </resources>
