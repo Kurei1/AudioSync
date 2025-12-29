@@ -2018,7 +2018,7 @@ const App = () => {
                                             <div className="flex items-start justify-between">
                                                 <div>
                                                     <h4 className="font-bold text-sm mb-1">{note.title}</h4>
-                                                    <p className="text-xs opacity-80 leading-relaxed">{note.message}</p>
+                                                    <p className="text-xs opacity-80 leading-relaxed whitespace-pre-line">{note.message}</p>
                                                 </div>
                                                 {note.type === 'update' && <Info size={16} className="text-blue-500 shrink-0" />}
                                             </div>
