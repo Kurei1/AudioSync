@@ -96,12 +96,12 @@ cd PHONE
 
 ### 📶 Wi-Fi (LAN)
 Stream audio over your local network. Both devices must be on the same Wi-Fi.
-- **Latency:** ~50-100ms
+- **Latency:** ~20-60ms
 - **Requirements:** Both devices on same network
 
 ### 🔌 USB Tether
 Ultra-low latency via USB debugging (ADB).
-- **Latency:** ~20-50ms
+- **Latency:** ~0-20ms
 - **Requirements:** USB cable, USB debugging enabled on phone
 
 ### 🔵 Bluetooth A2DP (Experimental)
