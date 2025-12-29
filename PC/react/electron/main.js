@@ -542,7 +542,16 @@ ipcMain.handle('bluetooth-stop', async () => {
     // Force kill the Bluetooth process
     if (bluetoothProcess && !bluetoothProcess.killed) {
         try {
-            bluetoothProcess.kill('SIGKILL');
+            // On Windows, use taskkill to forcefully terminate the exe
+            if (process.platform === 'win32') {
+                exec(`taskkill /pid ${bluetoothProcess.pid} /f /t`, (error) => {
+                    if (error) {
+                        console.error('[Bluetooth] taskkill error:', error);
+                    }
+                });
+            } else {
+                bluetoothProcess.kill('SIGTERM');
+            }
         } catch (e) {
             console.error('[Bluetooth] Kill error:', e);
         }

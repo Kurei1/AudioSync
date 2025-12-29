@@ -30,7 +30,8 @@
         "from": "../pc_receiver/dist",
         "to": "pc_receiver",
         "filter": [
-          "AudioSync Audio Service.exe"
+          "AudioSync Audio Service.exe",
+          "AudioSync Bluetooth Mode.exe"
         ]
       },
       {
