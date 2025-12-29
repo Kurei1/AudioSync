@@ -78,7 +78,7 @@ class MainActivity : AppCompatActivity() {
     private val KEY_SELECTED_TAB = "selected_tab"
     private val KEY_LANGUAGE = "app_language"
     
-    private val USB_TETHERING_IP = "192.168.42.129"
+    private val USB_TETHERING_IP = "127.0.0.1"
 
     private lateinit var audioManager: AudioManager
 
