@@ -94,7 +94,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // Reusable Modal Component
-const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth = 'max-w-md', isDarkMode = true }) => {
+const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth = 'max-w-md', isDarkMode = true, hideClose = false }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -105,9 +105,11 @@ const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth
                     </div>
                     <div className="flex items-center gap-2">
                         {rightAction}
-                        <button onClick={onClose} className="p-2 hover:bg-zinc-500/10 rounded-full transition-colors">
-                            <X size={20} />
-                        </button>
+                        {!hideClose && (
+                            <button onClick={onClose} className="p-2 hover:bg-zinc-500/10 rounded-full transition-colors">
+                                <X size={20} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 {children}
@@ -2077,6 +2079,15 @@ const App = () => {
                 title={t('termsTitle')}
                 maxWidth="max-w-lg"
                 isDarkMode={isDarkMode}
+                hideClose={!termsAccepted}
+                rightAction={
+                    <button
+                        onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${isDarkMode ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200' : 'bg-zinc-200 hover:bg-zinc-300 text-zinc-700'}`}
+                    >
+                        {language === 'ar' ? 'English' : 'العربية'}
+                    </button>
+                }
             >
                 <div className={`px-6 py-4 h-[400px] overflow-y-auto custom-scrollbar ${language === 'ar' ? 'text-right' : ''}`}>
                     <div className={`space-y-4 text-sm ${isDarkMode ? 'text-zinc-300' : 'text-zinc-700'}`}>
