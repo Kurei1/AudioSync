@@ -79,12 +79,23 @@ function createWindow() {
     });
 
     // Spawn Python Process
-    // Resolving path relative to this file: react/electron/main.js -> ../../pc_receiver/headless_receiver.py
-    const scriptPath = path.resolve(__dirname, '../../pc_receiver/headless_receiver.py');
-    console.log(`Launching Python script: ${scriptPath}`);
+    let pythonCmd;
+    let pythonArgs = [];
 
-    // Try 'python' or 'python3'
-    pythonProcess = spawn('python', ['-u', scriptPath]);
+    if (app.isPackaged) {
+        // In production, run the bundled EXE directly
+        pythonCmd = path.join(process.resourcesPath, 'pc_receiver', 'AudioSync Audio Service.exe');
+        console.log(`Launching Bundled Python EXE: ${pythonCmd}`);
+    } else {
+        // In development, run the script via system python
+        const scriptPath = path.resolve(__dirname, '../../pc_receiver/headless_receiver.py');
+        pythonCmd = 'python';
+        pythonArgs = ['-u', scriptPath];
+        console.log(`Launching Python script: ${scriptPath}`);
+    }
+
+    // Spawn process
+    pythonProcess = spawn(pythonCmd, pythonArgs);
 
     pythonProcess.on('error', (err) => {
         console.error('Failed to start python process:', err);
@@ -251,10 +262,25 @@ ipcMain.handle('check-for-updates', async () => {
 
 ipcMain.handle('download-update', async () => {
     try {
-        await autoUpdater.downloadUpdate();
+        // Ensure we have an update to download
+        // If we just blindly call downloadUpdate(), it throws "Please check update first" if no update is pending
+        // So we force a check if we aren't already downloading
+        if (!autoUpdater.currentVersion) {
+            await autoUpdater.checkForUpdates();
+        }
+
+        const cancellationToken = await autoUpdater.downloadUpdate();
         return { success: true };
     } catch (err) {
-        return { success: false, error: err.message };
+        console.error("Download update failed, trying to double-check update first:", err);
+        // Retry logic: If it failed, maybe because we didn't check properly?
+        try {
+            await autoUpdater.checkForUpdates();
+            await autoUpdater.downloadUpdate();
+            return { success: true };
+        } catch (retryErr) {
+            return { success: false, error: retryErr.message };
+        }
     }
 });
 
@@ -347,7 +373,13 @@ ipcMain.on('update-shortcuts', (event, shortcuts) => {
 
 // ADB Wrapper
 const { execFile } = require('child_process');
-const adbPath = path.resolve(__dirname, '../../pc_receiver/platform-tools/adb.exe');
+// Resolve ADB path dynamically based on environment
+let adbPath;
+if (app.isPackaged) {
+    adbPath = path.join(process.resourcesPath, 'pc_receiver', 'platform-tools', 'adb.exe');
+} else {
+    adbPath = path.resolve(__dirname, '../../pc_receiver/platform-tools/adb.exe');
+}
 
 ipcMain.handle('adb-command', async (event, args) => {
     // args: ['devices', '-l'] or ['-s', 'serial', 'reverse', 'tcp:50005', 'tcp:50005']

@@ -33,7 +33,8 @@ class HeadlessController:
         if AudioSyncVolumeControl:
             # Check if running as a bundled executable (Prod) or script (Dev)
             if getattr(sys, 'frozen', False):
-                target = "AudioSync.exe"
+                # When bundled, the audio comes from this process (AudioSync Audio Service.exe)
+                target = "AudioSync Audio Service.exe"
             else:
                 target = "python.exe"
             self.vol_control = AudioSyncVolumeControl(target_process=target)

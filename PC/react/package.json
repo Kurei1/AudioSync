@@ -1,7 +1,7 @@
 {
   "name": "audiosync-receiver",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.6",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -15,6 +15,7 @@
   "build": {
     "appId": "com.audiosync.receiver",
     "productName": "AudioSync Receiver",
+    "artifactName": "AudioSync-Receiver-Setup-${version}.${ext}",
     "directories": {
       "output": "dist-electron"
     },
@@ -26,8 +27,15 @@
     ],
     "extraResources": [
       {
-        "from": "../pc_receiver",
+        "from": "../pc_receiver/dist",
         "to": "pc_receiver",
+        "filter": [
+          "AudioSync Audio Service.exe"
+        ]
+      },
+      {
+        "from": "../pc_receiver/platform-tools",
+        "to": "pc_receiver/platform-tools",
         "filter": [
           "**/*"
         ]

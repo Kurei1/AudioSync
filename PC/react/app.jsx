@@ -239,6 +239,11 @@ const App = () => {
             cryptoScan: "Scan the QR code with your Binance or ByBit app to send payment",
             reachOut: "Reach out to me directly if you'd like to support the project in a different way:",
             emailMe: "Email Me",
+            // Update
+            downloading: "Downloading",
+            restartToInstall: "Restart to Install",
+            downloadUpdate: "Download Update",
+            updated: "Updated",
         },
         ar: {
             // Title bar
@@ -340,6 +345,11 @@ const App = () => {
             cryptoScan: "امسح رمز QR باستخدام تطبيق Binance أو ByBit لإرسال الدفعة",
             reachOut: "تواصل معي مباشرة إذا كنت ترغب في دعم المشروع بطريقة مختلفة:",
             emailMe: "راسلني",
+            // Update
+            downloading: "جاري التحميل",
+            restartToInstall: "أعد التشغيل للتثبيت",
+            downloadUpdate: "تنزيل التحديث",
+            updated: "محّدث",
         }
     };
 
@@ -375,7 +385,9 @@ const App = () => {
     const [notifications, setNotifications] = useState([]);
     const [updateDownloading, setUpdateDownloading] = useState(false);
     const [updateProgress, setUpdateProgress] = useState(0);
-    const [updateReady, setUpdateReady] = useState(false);
+    const [readyUpdateId, setReadyUpdateId] = useState(null); // Stores ID of the update that is ready to install
+    const downloadingIdRef = useRef(null); // Ref to track downloading ID inside callbacks
+
     const [isSoundMuted, setIsSoundMuted] = useState(() => {
         return localStorage.getItem('sound_muted') === 'true';
     });
@@ -533,6 +545,53 @@ const App = () => {
     // CORRECTED: Use raw.githubusercontent.com for direct JSON access
     const NOTIFICATIONS_URL = "https://raw.githubusercontent.com/Kurei1/app-notification/main/notifications.json";
 
+
+
+
+
+
+
+
+
+    const [appVersion, setAppVersion] = useState('0.0.0');
+    const [downloadingId, setDownloadingId] = useState(null);
+
+    // Initial fetch: Version & Notifications
+    useEffect(() => {
+        const init = async () => {
+            if (window.electronAPI) {
+                const ver = await window.electronAPI.getAppVersion();
+                setAppVersion(ver);
+            }
+            // Fetch notifications after getting version
+            fetchRemoteNotifications(true);
+        };
+        init();
+    }, []);
+
+    // Helper to compare versions (v1 > v2 ?)
+    const isNewerVersion = (v1, v2) => {
+        if (!v1 || !v2) return false;
+        const s1 = v1.replace(/v/i, '').split('.').map(Number);
+        const s2 = v2.replace(/v/i, '').split('.').map(Number);
+        for (let i = 0; i < Math.max(s1.length, s2.length); i++) {
+            const n1 = s1[i] || 0;
+            const n2 = s2[i] || 0;
+            if (n1 > n2) return true;
+            if (n1 < n2) return false;
+        }
+        return false;
+    };
+
+    const getVersionFromNote = (n) => {
+        if (n.version) return n.version;
+        // Try ID: update_v1.1.2
+        if (n.id && n.id.startsWith('update_v')) {
+            return n.id.replace('update_v', '');
+        }
+        return '0.0.0';
+    };
+
     const fetchRemoteNotifications = async (isBackground = false) => {
         if (!isBackground) setIsRefreshing(true);
         try {
@@ -552,27 +611,41 @@ const App = () => {
                 const deliveredSet = new Set(deliveredIds);
 
                 setNotifications(prev => {
-                    // Merge unique IDs
                     const existingIds = new Set(prev.map(n => n.id));
 
-                    // Filter out existing AND deleted for the LIST
-                    const newNotesForList = data.filter(n => !existingIds.has(n.id) && !deletedSet.has(n.id)).reverse();
+                    const validNewNotes = data.filter(n => {
+                        if (existingIds.has(n.id)) return false;
+                        if (deletedSet.has(n.id)) return false;
 
-                    if (newNotesForList.length > 0) {
-                        // Check if any of these are truly NEW (never delivered before)
-                        const trulyNewNotes = newNotesForList.filter(n => !deliveredSet.has(n.id));
+                        // Version Check for updates
+                        // We do NOT filter out old versions anymore, so we can show "Updated" status
+                        /*
+                        if (n.type === 'update') {
+                            const v = getVersionFromNote(n);
+                            if (!isNewerVersion(v, appVersion) && appVersion !== '0.0.0') {
+                                return false;
+                            }
+                        }
+                        */
+                        return true;
+                    }).reverse(); // Newest first
+
+                    if (validNewNotes.length > 0) {
+                        // Check if truly new (never delivered)
+                        const trulyNewNotes = validNewNotes.filter(n => !deliveredSet.has(n.id));
 
                         if (trulyNewNotes.length > 0) {
                             setHasUnread(true);
-                            showToast("New Notifications", "notification");
-                            playSound('notification');
+                            if (!isBackground) { // Only toast if user triggered or on critical
+                                showToast("New Notifications", "notification");
+                                playSound('notification');
+                            }
 
-                            // Mark these as delivered so we don't alert again
+                            // Auto-save delivery status
                             const updatedDelivered = [...new Set([...deliveredIds, ...trulyNewNotes.map(n => n.id)])];
                             localStorage.setItem('delivered_notifications', JSON.stringify(updatedDelivered));
                         }
-
-                        return [...newNotesForList, ...prev];
+                        return [...validNewNotes, ...prev];
                     }
                     return prev;
                 });
@@ -582,31 +655,18 @@ const App = () => {
             if (!isBackground) showToast("Failed to refresh", "error");
         } finally {
             if (!isBackground) {
-                // Forcing spin animation for at least 500ms
                 setTimeout(() => setIsRefreshing(false), 500);
             }
         }
     };
 
     useEffect(() => {
-        // Initial fetch (background)
-        const timer = setTimeout(() => fetchRemoteNotifications(true), 2000);
-
         // Auto-refresh every 1 hour (background)
         const interval = setInterval(() => {
             fetchRemoteNotifications(true);
         }, 3600000);
-
-        return () => {
-            clearTimeout(timer);
-            clearInterval(interval);
-        };
-    }, []);
-
-    // Startup: Refresh Notifications
-    useEffect(() => {
-        fetchRemoteNotifications(true);
-    }, []);
+        return () => clearInterval(interval);
+    }, [appVersion]); // Re-create if appVersion changes (unlikely)
 
     // Listen for update events from electron-updater
     useEffect(() => {
@@ -618,14 +678,19 @@ const App = () => {
 
         window.electronAPI.on('update-downloaded', () => {
             setUpdateDownloading(false);
-            setUpdateReady(true);
+            setDownloadingId(null);
+            // Mark the ID that WAS downloading as ready
+            if (downloadingIdRef.current) {
+                setReadyUpdateId(downloadingIdRef.current);
+                downloadingIdRef.current = null;
+            }
             showToast("Update Ready - Restart to Install", "notification");
         });
     }, []);
 
     // Handle update action from notification
-    const handleUpdateAction = async () => {
-        if (updateReady) {
+    const handleUpdateAction = async (noteId) => {
+        if (readyUpdateId === noteId) {
             // Update already downloaded, install it
             if (window.electronAPI?.installUpdate) {
                 window.electronAPI.installUpdate();
@@ -633,13 +698,17 @@ const App = () => {
         } else if (!updateDownloading) {
             // Start downloading
             setUpdateDownloading(true);
+            setDownloadingId(noteId);
+            downloadingIdRef.current = noteId; // Sync ref
             setUpdateProgress(0);
             showToast("Downloading Update...", "notification");
             if (window.electronAPI?.downloadUpdate) {
                 const result = await window.electronAPI.downloadUpdate();
                 if (!result.success) {
                     setUpdateDownloading(false);
-                    showToast("Update Failed", "error");
+                    setDownloadingId(null);
+                    downloadingIdRef.current = null;
+                    showToast("Update Failed: " + (result.error || "Unknown"), "error");
                 }
             }
         }
@@ -1722,8 +1791,10 @@ const App = () => {
                     {t('supportDev')}
                 </button>
 
-                {/* Empty spacer for balance */}
-                <div className="w-24"></div>
+                {/* Version Display - Right */}
+                <div className="w-24 text-right">
+                    <span className={`text-[10px] font-mono opacity-40 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>v{appVersion}</span>
+                </div>
             </footer>
 
             {/* --- SUPPORT MODAL (Multi-page) --- */}
@@ -1912,65 +1983,76 @@ const App = () => {
                     </div>
                 )}
             >
-                <div className="space-y-4 h-[400px] overflow-y-auto px-6 py-4 custom-scrollbar">
-                    {notifications.length === 0 ? (
-                        <div className="text-center py-8 opacity-50">
-                            <Bell size={48} className="mx-auto mb-2 opacity-20" />
-                            <p>{t('noNotifications')}</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {notifications.map((note) => (
-                                <div key={note.id} className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}>
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h4 className="font-bold text-sm mb-1">{note.title}</h4>
-                                            <p className="text-xs opacity-80 leading-relaxed">{note.message}</p>
+                <div className="flex flex-col h-[400px]">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar space-y-4">
+                        {notifications.length === 0 ? (
+                            <div className="text-center py-8 opacity-50">
+                                <Bell size={48} className="mx-auto mb-2 opacity-20" />
+                                <p>{t('noNotifications')}</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {notifications.map((note) => {
+                                    const noteVersion = getVersionFromNote(note);
+                                    const isInstalled = note.type === 'update' && !isNewerVersion(noteVersion, appVersion) && appVersion !== '0.0.0';
+
+                                    return (
+                                        <div key={note.id} className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}>
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <h4 className="font-bold text-sm mb-1">{note.title}</h4>
+                                                    <p className="text-xs opacity-80 leading-relaxed">{note.message}</p>
+                                                </div>
+                                                {note.type === 'update' && <Info size={16} className="text-blue-500 shrink-0" />}
+                                            </div>
+                                            {note.action && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (note.type === 'update' && !isInstalled) {
+                                                            handleUpdateAction(note.id);
+                                                        } else if (note.link) {
+                                                            window.open(note.link, '_blank');
+                                                        }
+                                                    }}
+                                                    disabled={(note.type === 'update' && updateDownloading && downloadingId !== note.id) || isInstalled}
+                                                    className={`mt-3 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${isInstalled
+                                                        ? 'bg-zinc-500/20 text-zinc-500 cursor-default hover:bg-zinc-500/20'
+                                                        : note.type === 'update' && downloadingId === note.id
+                                                            ? 'bg-blue-400 cursor-wait'
+                                                            : note.type === 'update' && readyUpdateId === note.id
+                                                                ? 'bg-green-600 hover:bg-green-700'
+                                                                : 'bg-blue-600 hover:bg-blue-700'
+                                                        }`}
+                                                >
+                                                    {note.type === 'update'
+                                                        ? isInstalled
+                                                            ? t('updated')
+                                                            : downloadingId === note.id
+                                                                ? `${t('downloading')}... ${updateProgress}%`
+                                                                : readyUpdateId === note.id
+                                                                    ? t('restartToInstall')
+                                                                    : t('downloadUpdate')
+                                                        : note.action}
+                                                </button>
+                                            )}
                                         </div>
-                                        {note.type === 'update' && <Info size={16} className="text-blue-500 shrink-0" />}
-                                    </div>
-                                    {note.action && (
-                                        <button
-                                            onClick={() => {
-                                                if (note.type === 'update') {
-                                                    handleUpdateAction();
-                                                } else if (note.link) {
-                                                    window.open(note.link, '_blank');
-                                                }
-                                            }}
-                                            disabled={note.type === 'update' && updateDownloading}
-                                            className={`mt-3 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${note.type === 'update' && updateDownloading
-                                                ? 'bg-blue-400 cursor-wait'
-                                                : note.type === 'update' && updateReady
-                                                    ? 'bg-green-600 hover:bg-green-700'
-                                                    : 'bg-blue-600 hover:bg-blue-700'
-                                                }`}
-                                        >
-                                            {note.type === 'update'
-                                                ? updateDownloading
-                                                    ? `Downloading... ${updateProgress}%`
-                                                    : updateReady
-                                                        ? 'Restart to Install'
-                                                        : note.action
-                                                : note.action}
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {notifications.length > 0 && (
+                        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+                            <button
+                                onClick={handleClearNotifications}
+                                className={`w-full py-3 rounded-2xl font-bold transition-colors text-sm ${isDarkMode ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-zinc-200 text-zinc-600'}`}
+                            >
+                                {t('clearNotifications')}
+                            </button>
                         </div>
                     )}
                 </div>
-
-                {notifications.length > 0 && (
-                    <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-2">
-                        <button
-                            onClick={handleClearNotifications}
-                            className={`w-full py-3 rounded-2xl font-bold transition-colors text-sm ${isDarkMode ? 'hover:bg-zinc-800 text-zinc-400' : 'hover:bg-zinc-200 text-zinc-600'}`}
-                        >
-                            {t('clearNotifications')}
-                        </button>
-                    </div>
-                )}
             </Modal>
 
             {/* --- TERMS OF USE MODAL --- */}
@@ -2048,7 +2130,7 @@ const App = () => {
                         </p>
                     )}
                 </div>
-            </Modal>
+            </Modal >
             <style dangerouslySetInnerHTML={{
                 __html: `
         @keyframes pulse-slow {
