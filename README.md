@@ -106,7 +106,7 @@ Ultra-low latency via USB debugging (ADB).
 
 ### 🔵 Bluetooth A2DP (Experimental)
 Makes your PC act as a Bluetooth speaker. Your phone sends audio directly via Bluetooth.
-- **Latency:** ~100-200ms
+- **Latency:** ~0-20ms
 - **Requirements:** Bluetooth on both devices, `winsdk` and `pyaudio` Python packages
 - **No Android app needed** - just pair and play!
 
