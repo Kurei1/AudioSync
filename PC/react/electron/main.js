@@ -436,13 +436,18 @@ ipcMain.on('update-shortcuts', (event, shortcuts) => {
 
 
 // ===================== BLUETOOTH SERVICE =====================
-// Uses bluetooth_receiver.py for A2DP sink functionality
+// Uses bluetooth_receiver.exe for A2DP sink functionality
 
-let bluetoothScriptPath;
+let bluetoothExePath;
+let bluetoothUseExe = false;
+
 if (app.isPackaged) {
-    bluetoothScriptPath = path.join(process.resourcesPath, 'pc_receiver', 'bluetooth_receiver.py');
+    bluetoothExePath = path.join(process.resourcesPath, 'pc_receiver', 'AudioSync Bluetooth Mode.exe');
+    bluetoothUseExe = true;
 } else {
-    bluetoothScriptPath = path.resolve(__dirname, '../../pc_receiver/bluetooth_receiver.py');
+    // In dev mode, use Python script directly
+    bluetoothExePath = path.resolve(__dirname, '../../pc_receiver/bluetooth_receiver.py');
+    bluetoothUseExe = false;
 }
 
 ipcMain.handle('bluetooth-start', async () => {
@@ -452,12 +457,18 @@ ipcMain.handle('bluetooth-start', async () => {
         return { success: true, message: 'Already running' };
     }
 
-    console.log(`[Bluetooth] Launching: ${bluetoothScriptPath}`);
+    console.log(`[Bluetooth] Launching: ${bluetoothExePath}`);
 
     try {
-        bluetoothProcess = spawn('python', ['-u', bluetoothScriptPath], {
-            windowsHide: true
-        });
+        if (bluetoothUseExe) {
+            bluetoothProcess = spawn(bluetoothExePath, [], {
+                windowsHide: true
+            });
+        } else {
+            bluetoothProcess = spawn('python', ['-u', bluetoothExePath], {
+                windowsHide: true
+            });
+        }
 
         // Send PC Bluetooth display name to renderer immediately
         const pcName = process.env.COMPUTERNAME || os.hostname();
