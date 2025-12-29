@@ -1,6 +1,11 @@
 # AudioSync
 
 <p align="center">
+  <strong>بسم الله الرحمان الرحيم</strong><br>
+  <strong>اللهم علمنا ما ينفعنا، وانفعنا بما علمتنا، وزدنا علما</strong>
+</p>
+
+<p align="center">
   <img src="assets/phone-icon.png" alt="Phone App" width="100"/>
   &nbsp;&nbsp;&nbsp;➡️&nbsp;&nbsp;&nbsp;
   <img src="assets/pc-icon.png" alt="PC Receiver" width="100"/>
@@ -35,6 +40,15 @@ AudioSync is an open-source project that lets you use your phone as a wireless a
   - Stream system audio (Android 10+)
   - Simple, intuitive interface
   - Background streaming support
+
+---
+
+## Requirements
+
+| Platform | Minimum Version |
+|----------|-----------------|
+| **Android** | Android 10 (API 29) or higher |
+| **Windows** | Windows 10 or higher |
 
 ---
 
