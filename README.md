@@ -5,6 +5,8 @@
   <strong>اللهم علمنا ما ينفعنا، وانفعنا بما علمتنا، وزدنا علما</strong>
 </p>
 
+---
+
 <p align="center">
   <img src="assets/phone-icon.png" alt="Phone App" width="100"/>
   &nbsp;&nbsp;&nbsp;➡️&nbsp;&nbsp;&nbsp;
