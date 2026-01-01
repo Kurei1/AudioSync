@@ -2131,12 +2131,21 @@ const App = () => {
                                     const noteVersion = getVersionFromNote(note);
                                     const isInstalled = note.type === 'update' && !isNewerVersion(noteVersion, appVersion) && appVersion !== '0.0.0';
 
+                                    // Automatic Translation for Feedback_001
+                                    let displayTitle = note.title;
+                                    let displayMessage = note.message;
+
+                                    if (note.type === 'feedback' && language === 'ar') {
+                                        displayTitle = "أنا أقدر رأيك";
+                                        displayMessage = "ساعدني في تحسين AudioSync من خلال مشاركة أفكارك.";
+                                    }
+
                                     return (
                                         <div key={note.id} className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}>
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <h4 className="font-bold text-sm mb-1">{note.title}</h4>
-                                                    <p className="text-xs opacity-80 leading-relaxed whitespace-pre-line">{note.message}</p>
+                                                    <h4 className="font-bold text-sm mb-1">{displayTitle}</h4>
+                                                    <p className="text-xs opacity-80 leading-relaxed whitespace-pre-line">{displayMessage}</p>
                                                 </div>
                                                 {note.type === 'update' && <Info size={16} className="text-blue-500 shrink-0" />}
                                             </div>
