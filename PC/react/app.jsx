@@ -39,8 +39,12 @@ import {
     EyeOff,
     Globe,
     Languages,
-    FileText
+    FileText,
+    Bug
 } from 'lucide-react';
+
+import FeedbackForm from './FeedbackForm';
+import BugReportForm from './BugReportForm';
 
 import connSound from './assets/sounds/conn.mp3';
 import discSound from './assets/sounds/disc.mp3';
@@ -49,6 +53,46 @@ import failedSound from './assets/sounds/Failed.mp3';
 import errorSound from './assets/sounds/error.mp3';
 import binanceQR from './assets/images/binqr.jpg';
 import bybitQR from './assets/images/byqr.jpg';
+
+import { getAuth, signInAnonymously } from 'firebase/auth';
+import { doc, setDoc, increment, serverTimestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { db, auth, appId } from './firebase-config';
+
+// Track app install (only once per device)
+const trackInstall = async () => {
+    try {
+        // Check localStorage first - no Firebase read needed
+        if (localStorage.getItem('install_tracked')) {
+            return; // Already tracked
+        }
+
+        // Wait for auth
+        if (!auth.currentUser) {
+            await signInAnonymously(auth);
+        }
+
+        const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
+        localStorage.setItem('deviceId', deviceId);
+
+        // Use deviceId as document ID - setDoc won't duplicate
+        const installDoc = doc(db, 'artifacts', appId, 'public', 'data', 'installs', deviceId);
+        await setDoc(installDoc, {
+            platform: 'Windows',
+            version: '1.0.0',
+            deviceId: deviceId,
+            timestamp: serverTimestamp()
+        });
+
+        // Mark as tracked in localStorage
+        localStorage.setItem('install_tracked', 'true');
+        console.log('[Install] Tracked successfully!');
+    } catch (err) {
+        console.error('[Install] Tracking error:', err);
+    }
+};
+
+// Call on module load
+trackInstall();
 
 /**
  * AudioSync Receiver UI
@@ -124,6 +168,30 @@ const Modal = ({ isOpen, onClose, title, children, action, rightAction, maxWidth
 };
 
 const App = () => {
+    // Analytics
+    useEffect(() => {
+        const trackInstall = async () => {
+            try {
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+                const hasRunBefore = localStorage.getItem('audio_sync_installed');
+                if (!hasRunBefore) {
+                    console.log("[Analytics] First run detected. Tracking install...");
+                    localStorage.setItem('audio_sync_installed', 'true');
+                    const statsRef = doc(db, 'artifacts', appId, 'public', 'data', 'analytics', 'totals');
+                    await setDoc(statsRef, {
+                        installs: increment(1),
+                        last_install: serverTimestamp()
+                    }, { merge: true });
+                    console.log("[Analytics] Install tracked successfully.");
+                }
+            } catch (error) {
+                console.error("[Analytics] Error tracking install:", error);
+            }
+        };
+        trackInstall();
+    }, []);
     // Theme and UI State
     const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -252,6 +320,8 @@ const App = () => {
             downloadUpdate: "Download Update",
             updated: "Updated",
             couldNotReceiveData: "Could not receive any data.",
+            rateApp: "Rate App",
+            feedbackSent: "Feedback Sent",
         },
         ar: {
             // Title bar
@@ -364,6 +434,8 @@ const App = () => {
             downloadUpdate: "تنزيل التحديث",
             updated: "محّدث",
             couldNotReceiveData: "تعذر استقبال البيانات.",
+            rateApp: "قيّم التطبيق",
+            feedbackSent: "تم إرسال الرأي",
         }
     };
 
@@ -394,6 +466,9 @@ const App = () => {
 
     const [activeMethod, setActiveMethod] = useState('lan');
     const [isSupportOpen, setIsSupportOpen] = useState(false);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [feedbackNotificationId, setFeedbackNotificationId] = useState(null); // ID of the notification that triggered feedback
+    const [isBugReportOpen, setIsBugReportOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const [notifications, setNotifications] = useState([]);
@@ -557,7 +632,7 @@ const App = () => {
 
     // Placeholder URL - User should replace this with their actual JSON URL
     // CORRECTED: Use raw.githubusercontent.com for direct JSON access
-    const NOTIFICATIONS_URL = "https://raw.githubusercontent.com/Kurei1/app-notification/main/notifications.json";
+    const NOTIFICATIONS_URL = "https://raw.githubusercontent.com/Kurei1/Notifications/main/AudioSync.json";
 
 
 
@@ -1283,406 +1358,377 @@ const App = () => {
                 </div>
             </div>
 
-            {/* --- MAIN SPLIT LAYOUT --- */}
-            <main className="flex-1 flex overflow-hidden">
+            {/* --- CONTENT AREA (Switch between Dashboard, Feedback, and Bug Report) --- */}
+            {isFeedbackOpen ? (
+                <main className="flex-1 flex overflow-hidden">
+                    <FeedbackForm
+                        onClose={() => setIsFeedbackOpen(false)}
+                        isDarkMode={isDarkMode}
+                        language={language}
+                        notificationId={feedbackNotificationId}
+                        onSubmitSuccess={() => {
+                            // Mark feedback as sent for this notification
+                            if (feedbackNotificationId) {
+                                const sentFeedbacks = JSON.parse(localStorage.getItem('sent_feedbacks') || '[]');
+                                if (!sentFeedbacks.includes(feedbackNotificationId)) {
+                                    sentFeedbacks.push(feedbackNotificationId);
+                                    localStorage.setItem('sent_feedbacks', JSON.stringify(sentFeedbacks));
+                                }
+                            }
+                        }}
+                    />
+                </main>
+            ) : isBugReportOpen ? (
+                <main className="flex-1 flex overflow-hidden">
+                    <BugReportForm
+                        onClose={() => setIsBugReportOpen(false)}
+                        isDarkMode={isDarkMode}
+                        language={language}
+                    />
+                </main>
+            ) : (
+                <main className="flex-1 flex overflow-hidden">
+                    {/* Left Sidebar: Methods & Audio Settings */}
+                    <aside className={`w-80 border-r flex flex-col overflow-hidden ${isDarkMode ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-200 bg-white/30'}`}>
+                        <div className="p-4 flex-1 flex flex-col min-h-0">
+                            <section className="mb-4 flex-shrink-0">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h1 className="text-xl font-bold tracking-tight">{t('receiver')}</h1>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleTheme}
+                                            className={`p-2 rounded-full hover:scale-110 transition-transform ${isDarkMode ? 'hover:bg-zinc-800 text-yellow-500' : 'hover:bg-zinc-200 text-zinc-600'}`}
+                                        >
+                                            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                                        </button>
+                                        <button
+                                            onClick={handleOpenNotifications}
+                                            className={`p-2 rounded-full relative hover:scale-110 transition-transform ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-200'}`}
+                                            title={isSoundMuted ? "Notifications (Muted)" : "Notifications"}
+                                        >
+                                            <Bell size={18} />
+                                            {hasUnread && <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border border-inherit"></span>}
+                                            {/* Mute indicator slash */}
+                                            {isSoundMuted && (
+                                                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <span className="w-0.5 h-5 bg-red-500 rotate-45 rounded-full"></span>
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
 
-                {/* Left Sidebar: Methods & Audio Settings */}
-                <aside className={`w-80 border-r flex flex-col overflow-hidden ${isDarkMode ? 'border-zinc-800 bg-zinc-900/30' : 'border-zinc-200 bg-white/30'}`}>
-                    <div className="p-4 flex-1 flex flex-col min-h-0">
-                        <section className="mb-4 flex-shrink-0">
-                            <div className="flex items-center justify-between mb-3">
-                                <h1 className="text-xl font-bold tracking-tight">{t('receiver')}</h1>
-                                <div className="flex items-center gap-2">
+                                <div className="space-y-2">
                                     <button
-                                        onClick={toggleTheme}
-                                        className={`p-2 rounded-full hover:scale-110 transition-transform ${isDarkMode ? 'hover:bg-zinc-800 text-yellow-500' : 'hover:bg-zinc-200 text-zinc-600'}`}
+                                        onClick={() => setActiveMethod('lan')}
+                                        disabled={connectionState !== 'idle'}
+                                        className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'lan' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
-                                        {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                                        <div className="flex items-center gap-3">
+                                            <Wifi size={18} />
+                                            <span className="font-medium">{t('lanNetwork')}</span>
+                                        </div>
+                                        <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
                                     </button>
+
+                                    {/* USB Method */}
                                     <button
-                                        onClick={handleOpenNotifications}
-                                        className={`p-2 rounded-full relative hover:scale-110 transition-transform ${isDarkMode ? 'hover:bg-zinc-800' : 'hover:bg-zinc-200'}`}
-                                        title={isSoundMuted ? "Notifications (Muted)" : "Notifications"}
+                                        onClick={() => setActiveMethod('usb')}
+                                        disabled={connectionState !== 'idle'}
+                                        className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'usb' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
-                                        <Bell size={18} />
-                                        {hasUnread && <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border border-inherit"></span>}
-                                        {/* Mute indicator slash */}
-                                        {isSoundMuted && (
-                                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <span className="w-0.5 h-5 bg-red-500 rotate-45 rounded-full"></span>
-                                            </span>
+                                        <div className="flex items-center gap-3">
+                                            <Smartphone size={18} />
+                                            <span className="font-medium">{t('usbTether')}</span>
+                                        </div>
+                                        <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
+                                    </button>
+
+                                    {/* Bluetooth Method */}
+                                    <button
+                                        onClick={() => setActiveMethod('bluetooth')}
+                                        disabled={connectionState !== 'idle'}
+                                        className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'bluetooth' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Bluetooth size={18} />
+                                            <span className="font-medium">{t('bluetooth')}</span>
+                                        </div>
+                                        <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
+                                    </button>
+                                </div>
+                            </section>
+
+                            {/* Global Port Setting (Kept in Sidebar) */}
+                            <div className="space-y-3 mb-4 flex-shrink-0">
+                                {/* Port */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium opacity-70">{t('listenPort')}</label>
+                                        <button
+                                            onClick={generateSimplePort}
+                                            disabled={isConnected}
+                                            className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/10 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+                                            title={language === 'ar' ? 'إنشاء منفذ عشوائي' : 'Generate Random Simple Port'}
+                                        >
+                                            <Shuffle size={12} />
+                                            {t('random')}
+                                        </button>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={port}
+                                        onChange={(e) => setPort(e.target.value)}
+                                        disabled={isConnected}
+                                        className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
+                                        placeholder="50005"
+                                    />
+                                </div>
+
+                                {/* Output Device (Global) */}
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-sm font-medium opacity-70">{t('outputDevice')}</label>
+                                        <button
+                                            onClick={handleDeviceRefresh}
+                                            className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors"
+                                            title={language === 'ar' ? 'تحديث الأجهزة' : 'Refresh Devices'}
+                                        >
+                                            <RefreshCw size={14} className={`${isRefreshing ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        <select
+                                            value={selectedDevice}
+                                            onChange={(e) => setSelectedDevice(e.target.value)}
+                                            disabled={isConnected}
+                                            className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${language === 'ar' ? 'pl-10' : 'pr-10'} ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
+                                        >
+                                            <option value="-1">{t('defaultOutput')}</option>
+                                            {devices.map((dev) => {
+                                                const [id, ...nameParts] = dev.split(':');
+                                                return <option key={id} value={id}>{nameParts.join(':').trim()}</option>;
+                                            })}
+                                        </select>
+                                        <ChevronRight size={14} className={`absolute top-3.5 pointer-events-none opacity-50 rotate-90 ${language === 'ar' ? 'left-3' : 'right-3'}`} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Shortcuts Settings */}
+                            <div className="space-y-2 mb-4 flex-shrink-0">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-medium opacity-70 flex items-center gap-2">
+                                        <Sliders size={14} /> {t('volumeControls')}
+                                    </label>
+                                    <button
+                                        onClick={resetShortcuts}
+                                        disabled={isConnected}
+                                        title={language === 'ar' ? 'إعادة التعيين' : 'Reset Defaults'}
+                                        className="p-1 hover:bg-zinc-500/10 rounded-full transition-colors opacity-50 hover:opacity-100"
+                                    >
+                                        <RotateCcw size={12} />
+                                    </button>
+                                </div>
+
+                                <div className={`p-2 rounded-2xl border space-y-1 ${isDarkMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-100/50 border-zinc-200'}`}>
+                                    {/* Vol Up */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('volumeUp')}</span>
+                                        <button
+                                            onClick={() => setIsRecording('volUp')}
+                                            disabled={isConnected}
+                                            className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-mono border transition-all truncate text-center ${isRecording === 'volUp'
+                                                ? 'bg-red-500 text-white border-red-500 animate-pulse'
+                                                : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
+                                                } disabled:opacity-50`}
+                                        >
+                                            {isRecording === 'volUp' ? (language === 'ar' ? '...اضغط' : 'Press Keys...') : (shortcuts.volUp || (language === 'ar' ? 'لا يوجد' : 'None'))}
+                                        </button>
+                                    </div>
+
+                                    {/* Vol Down */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('volumeDown')}</span>
+                                        <button
+                                            onClick={() => setIsRecording('volDown')}
+                                            disabled={isConnected}
+                                            className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-mono border transition-all truncate text-center ${isRecording === 'volDown'
+                                                ? 'bg-red-500 text-white border-red-500 animate-pulse'
+                                                : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
+                                                } disabled:opacity-50`}
+                                        >
+                                            {isRecording === 'volDown' ? (language === 'ar' ? '...اضغط' : 'Press Keys...') : (shortcuts.volDown || (language === 'ar' ? 'لا يوجد' : 'None'))}
+                                        </button>
+                                    </div>
+
+                                    {/* Mute */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('muteUnmute')}</span>
+                                        <button
+                                            onClick={() => setIsRecording('mute')}
+                                            disabled={isConnected}
+                                            className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-mono border transition-all truncate text-center ${isRecording === 'mute'
+                                                ? 'bg-red-500 text-white border-red-500 animate-pulse'
+                                                : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
+                                                } disabled:opacity-50`}
+                                        >
+                                            {isRecording === 'mute' ? (language === 'ar' ? '...سجل' : 'Record...') : (shortcuts.mute || (language === 'ar' ? 'لا يوجد' : 'None'))}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-[10px] opacity-50 px-2 leading-relaxed">
+                                <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('volumeNote')}
+                            </div>
+
+                        </div>
+                    </aside>
+
+                    {/* Right Content Area: Status & Analytics */}
+                    <section className="flex-1 p-4 overflow-hidden flex flex-col">
+                        <div className="w-full h-full flex flex-col gap-2 justify-center">
+
+                            {/* Connection Status Card */}
+                            <div className={`p-2 rounded-[1.5rem] relative overflow-hidden transition-all flex-shrink-0 ${connectionState === 'connected' ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-2xl' :
+                                connectionState === 'connecting' ? 'bg-amber-500 text-white shadow-amber-500/20 shadow-2xl' :
+                                    connectionState === 'failed' ? 'bg-red-500 text-white shadow-red-500/20 shadow-2xl' :
+                                        (isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-zinc-200 shadow-xl shadow-zinc-200/50')
+                                }`}>
+                                <div className="relative z-10 flex flex-col items-center text-center gap-2">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${connectionState === 'connected' ? 'bg-white/20 animate-pulse-slow' :
+                                        connectionState === 'connecting' ? 'bg-white/20 animate-pulse' :
+                                            connectionState === 'failed' ? 'bg-white/20' :
+                                                'bg-blue-500/10 animate-pulse-slow'
+                                        }`}>
+                                        {activeMethod === 'bluetooth' ? (
+                                            <Bluetooth size={32} className={
+                                                connectionState === 'connected' ? 'text-white' :
+                                                    connectionState === 'connecting' ? 'text-white animate-ping' :
+                                                        connectionState === 'failed' ? 'text-white' :
+                                                            'text-blue-500'
+                                            } />
+                                        ) : activeMethod === 'usb' ? (
+                                            <Cable size={32} className={
+                                                connectionState === 'connected' ? 'text-white' :
+                                                    connectionState === 'connecting' ? 'text-white animate-ping' :
+                                                        connectionState === 'failed' ? 'text-white' :
+                                                            'text-blue-500'
+                                            } />
+                                        ) : (
+                                            <Wifi size={32} className={
+                                                connectionState === 'connected' ? 'text-white' :
+                                                    connectionState === 'connecting' ? 'text-white animate-ping' :
+                                                        connectionState === 'failed' ? 'text-white' :
+                                                            'text-blue-500'
+                                            } />
                                         )}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <button
-                                    onClick={() => setActiveMethod('lan')}
-                                    disabled={connectionState !== 'idle'}
-                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'lan' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Wifi size={18} />
-                                        <span className="font-medium">{t('lanNetwork')}</span>
                                     </div>
-                                    <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
-                                </button>
-
-                                {/* USB Method */}
-                                <button
-                                    onClick={() => setActiveMethod('usb')}
-                                    disabled={connectionState !== 'idle'}
-                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'usb' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Smartphone size={18} />
-                                        <span className="font-medium">{t('usbTether')}</span>
+                                    <div>
+                                        <h3 className="text-xl font-bold">
+                                            {connectionState === 'connected' ? t('receiverActive') :
+                                                connectionState === 'connecting' ? t('connecting') :
+                                                    connectionState === 'failed' ? t('connectionFailed') :
+                                                        t('readyToConnect')}
+                                        </h3>
+                                        <p className={`text-sm mt-1 ${connectionState !== 'idle' ? 'text-white/80' : 'opacity-60'}`}>
+                                            {connectionState === 'connected' ? (activeMethod === 'bluetooth' ? t('serviceStarted') : t('receivingAudio')) :
+                                                connectionState === 'connecting' ? t('waitingPackets') :
+                                                    connectionState === 'failed' ? t('couldNotReceiveData') :
+                                                        (activeMethod === 'bluetooth' ? t('serviceStopped') : t('connectPhone'))}
+                                        </p>
                                     </div>
-                                    <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
-                                </button>
+                                    <button
+                                        onClick={toggleConnection}
+                                        disabled={connectionState === 'connecting' || connectionState === 'failed' || (activeMethod === 'bluetooth' && cooldownSeconds > 0)}
+                                        className={`px-6 py-2 rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:opacity-70 disabled:cursor-not-allowed ${connectionState === 'connected' ? 'bg-red-500 text-white shadow-xl hover:bg-red-600' :
+                                            connectionState === 'connecting' ? 'bg-white/20 text-white cursor-wait' :
+                                                connectionState === 'failed' ? 'bg-white/20 text-white' :
+                                                    'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                            }`}
+                                    >
+                                        {activeMethod === 'bluetooth' && cooldownSeconds > 0
+                                            ? `${language === 'ar' ? 'انتظر' : 'Wait'} (${cooldownSeconds}s)`
+                                            : connectionState === 'connected' ? t('stopListening') :
+                                                connectionState === 'connecting' ? t('connecting') :
+                                                    t('startListening')}
+                                    </button>
+                                </div>
+                            </div>
 
-                                {/* Bluetooth Method */}
-                                <button
-                                    onClick={() => setActiveMethod('bluetooth')}
-                                    disabled={connectionState !== 'idle'}
-                                    className={`w-full flex items-center justify-between p-3 rounded-[1.25rem] transition-all ${activeMethod === 'bluetooth' ? (isDarkMode ? 'bg-blue-600/10 text-blue-400 border border-blue-600/30' : 'bg-blue-50 text-blue-600 border border-blue-100') : 'hover:bg-zinc-500/05'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Bluetooth size={18} />
-                                        <span className="font-medium">{t('bluetooth')}</span>
+                            {/* LAN Info Panel */}
+                            {activeMethod === 'lan' && (
+                                <div className={`p-3 rounded-2xl border flex flex-col gap-1 flex-shrink-0 ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+                                    <div className="flex items-center justify-center w-full gap-2 mb-1">
+                                        <Wifi size={20} className="text-blue-500" />
+                                        <p className="text-sm font-bold text-blue-500">{t('wifiReceiver')}</p>
                                     </div>
-                                    <ChevronRight size={16} className={language === 'ar' ? 'rotate-180' : ''} />
-                                </button>
-                            </div>
-                        </section>
-
-                        {/* Global Port Setting (Kept in Sidebar) */}
-                        <div className="space-y-3 mb-4 flex-shrink-0">
-                            {/* Port */}
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium opacity-70">{t('listenPort')}</label>
-                                    <button
-                                        onClick={generateSimplePort}
-                                        disabled={isConnected}
-                                        className="text-[10px] font-bold text-blue-500 hover:bg-blue-500/10 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
-                                        title={language === 'ar' ? 'إنشاء منفذ عشوائي' : 'Generate Random Simple Port'}
-                                    >
-                                        <Shuffle size={12} />
-                                        {t('random')}
-                                    </button>
-                                </div>
-                                <input
-                                    type="text"
-                                    value={port}
-                                    onChange={(e) => setPort(e.target.value)}
-                                    disabled={isConnected}
-                                    className={`w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-mono ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
-                                    placeholder="50005"
-                                />
-                            </div>
-
-                            {/* Output Device (Global) */}
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium opacity-70">{t('outputDevice')}</label>
-                                    <button
-                                        onClick={handleDeviceRefresh}
-                                        className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-colors"
-                                        title={language === 'ar' ? 'تحديث الأجهزة' : 'Refresh Devices'}
-                                    >
-                                        <RefreshCw size={14} className={`${isRefreshing ? 'animate-spin' : ''}`} />
-                                    </button>
-                                </div>
-                                <div className="relative">
-                                    <select
-                                        value={selectedDevice}
-                                        onChange={(e) => setSelectedDevice(e.target.value)}
-                                        disabled={isConnected}
-                                        className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${language === 'ar' ? 'pl-10' : 'pr-10'} ${isDarkMode ? 'bg-zinc-800 border-zinc-700 disabled:opacity-50' : 'bg-zinc-100 border-zinc-200 disabled:opacity-50'}`}
-                                    >
-                                        <option value="-1">{t('defaultOutput')}</option>
-                                        {devices.map((dev) => {
-                                            const [id, ...nameParts] = dev.split(':');
-                                            return <option key={id} value={id}>{nameParts.join(':').trim()}</option>;
-                                        })}
-                                    </select>
-                                    <ChevronRight size={14} className={`absolute top-3.5 pointer-events-none opacity-50 rotate-90 ${language === 'ar' ? 'left-3' : 'right-3'}`} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Shortcuts Settings */}
-                        <div className="space-y-2 mb-4 flex-shrink-0">
-                            <div className="flex justify-between items-center">
-                                <label className="text-sm font-medium opacity-70 flex items-center gap-2">
-                                    <Sliders size={14} /> {t('volumeControls')}
-                                </label>
-                                <button
-                                    onClick={resetShortcuts}
-                                    disabled={isConnected}
-                                    title={language === 'ar' ? 'إعادة التعيين' : 'Reset Defaults'}
-                                    className="p-1 hover:bg-zinc-500/10 rounded-full transition-colors opacity-50 hover:opacity-100"
-                                >
-                                    <RotateCcw size={12} />
-                                </button>
-                            </div>
-
-                            <div className={`p-2 rounded-2xl border space-y-1 ${isDarkMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-zinc-100/50 border-zinc-200'}`}>
-                                {/* Vol Up */}
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('volumeUp')}</span>
-                                    <button
-                                        onClick={() => setIsRecording('volUp')}
-                                        disabled={isConnected}
-                                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-mono border transition-all truncate text-center ${isRecording === 'volUp'
-                                            ? 'bg-red-500 text-white border-red-500 animate-pulse'
-                                            : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
-                                            } disabled:opacity-50`}
-                                    >
-                                        {isRecording === 'volUp' ? (language === 'ar' ? '...اضغط' : 'Press Keys...') : (shortcuts.volUp || (language === 'ar' ? 'لا يوجد' : 'None'))}
-                                    </button>
-                                </div>
-
-                                {/* Vol Down */}
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('volumeDown')}</span>
-                                    <button
-                                        onClick={() => setIsRecording('volDown')}
-                                        disabled={isConnected}
-                                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-mono border transition-all truncate text-center ${isRecording === 'volDown'
-                                            ? 'bg-red-500 text-white border-red-500 animate-pulse'
-                                            : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
-                                            } disabled:opacity-50`}
-                                    >
-                                        {isRecording === 'volDown' ? (language === 'ar' ? '...اضغط' : 'Press Keys...') : (shortcuts.volDown || (language === 'ar' ? 'لا يوجد' : 'None'))}
-                                    </button>
-                                </div>
-
-                                {/* Mute */}
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[10px] uppercase font-bold opacity-60 w-24">{t('muteUnmute')}</span>
-                                    <button
-                                        onClick={() => setIsRecording('mute')}
-                                        disabled={isConnected}
-                                        className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-mono border transition-all truncate text-center ${isRecording === 'mute'
-                                            ? 'bg-red-500 text-white border-red-500 animate-pulse'
-                                            : isDarkMode ? 'bg-zinc-900 border-zinc-700 hover:border-blue-500/50' : 'bg-white border-zinc-200 hover:border-blue-500/50'
-                                            } disabled:opacity-50`}
-                                    >
-                                        {isRecording === 'mute' ? (language === 'ar' ? '...سجل' : 'Record...') : (shortcuts.mute || (language === 'ar' ? 'لا يوجد' : 'None'))}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="text-[10px] opacity-50 px-2 leading-relaxed">
-                            <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('volumeNote')}
-                        </div>
-
-                    </div>
-                </aside>
-
-                {/* Right Content Area: Status & Analytics */}
-                <section className="flex-1 p-4 overflow-hidden flex flex-col">
-                    <div className="w-full h-full flex flex-col gap-2 justify-center">
-
-                        {/* Connection Status Card */}
-                        <div className={`p-2 rounded-[1.5rem] relative overflow-hidden transition-all flex-shrink-0 ${connectionState === 'connected' ? 'bg-blue-600 text-white shadow-blue-500/20 shadow-2xl' :
-                            connectionState === 'connecting' ? 'bg-amber-500 text-white shadow-amber-500/20 shadow-2xl' :
-                                connectionState === 'failed' ? 'bg-red-500 text-white shadow-red-500/20 shadow-2xl' :
-                                    (isDarkMode ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-zinc-200 shadow-xl shadow-zinc-200/50')
-                            }`}>
-                            <div className="relative z-10 flex flex-col items-center text-center gap-2">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${connectionState === 'connected' ? 'bg-white/20 animate-pulse-slow' :
-                                    connectionState === 'connecting' ? 'bg-white/20 animate-pulse' :
-                                        connectionState === 'failed' ? 'bg-white/20' :
-                                            'bg-blue-500/10 animate-pulse-slow'
-                                    }`}>
-                                    {activeMethod === 'bluetooth' ? (
-                                        <Bluetooth size={32} className={
-                                            connectionState === 'connected' ? 'text-white' :
-                                                connectionState === 'connecting' ? 'text-white animate-ping' :
-                                                    connectionState === 'failed' ? 'text-white' :
-                                                        'text-blue-500'
-                                        } />
-                                    ) : activeMethod === 'usb' ? (
-                                        <Cable size={32} className={
-                                            connectionState === 'connected' ? 'text-white' :
-                                                connectionState === 'connecting' ? 'text-white animate-ping' :
-                                                    connectionState === 'failed' ? 'text-white' :
-                                                        'text-blue-500'
-                                        } />
-                                    ) : (
-                                        <Wifi size={32} className={
-                                            connectionState === 'connected' ? 'text-white' :
-                                                connectionState === 'connecting' ? 'text-white animate-ping' :
-                                                    connectionState === 'failed' ? 'text-white' :
-                                                        'text-blue-500'
-                                        } />
-                                    )}
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold">
-                                        {connectionState === 'connected' ? t('receiverActive') :
-                                            connectionState === 'connecting' ? t('connecting') :
-                                                connectionState === 'failed' ? t('connectionFailed') :
-                                                    t('readyToConnect')}
-                                    </h3>
-                                    <p className={`text-sm mt-1 ${connectionState !== 'idle' ? 'text-white/80' : 'opacity-60'}`}>
-                                        {connectionState === 'connected' ? (activeMethod === 'bluetooth' ? t('serviceStarted') : t('receivingAudio')) :
-                                            connectionState === 'connecting' ? t('waitingPackets') :
-                                                connectionState === 'failed' ? t('couldNotReceiveData') :
-                                                    (activeMethod === 'bluetooth' ? t('serviceStopped') : t('connectPhone'))}
+                                    <p className={`text-sm ${isDarkMode ? 'text-blue-200/80' : 'text-blue-800/80'}`}>
+                                        {language === 'ar' ? (
+                                            <>
+                                                1. {t('wifiStep1')}<br />
+                                                2. {t('wifiStep2')}<br />
+                                                3. {t('wifiStep3')}<br />
+                                                4. {t('wifiStep4')}<br />
+                                                5. {t('wifiStep5')}
+                                            </>
+                                        ) : (
+                                            <>
+                                                1. Connect both devices to the <b>same Wi-Fi</b>.<br />
+                                                2. Enter the <b>Server IP</b> & <b>Port</b> in the app.<br />
+                                                3. <b>Start Streaming</b> from the phone.<br />
+                                                4. Click <b>Start Listening</b>.<br />
+                                                5. Use the <b>volume shortcuts</b> to adjust the volume.
+                                            </>
+                                        )}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={toggleConnection}
-                                    disabled={connectionState === 'connecting' || connectionState === 'failed' || (activeMethod === 'bluetooth' && cooldownSeconds > 0)}
-                                    className={`px-6 py-2 rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:opacity-70 disabled:cursor-not-allowed ${connectionState === 'connected' ? 'bg-red-500 text-white shadow-xl hover:bg-red-600' :
-                                        connectionState === 'connecting' ? 'bg-white/20 text-white cursor-wait' :
-                                            connectionState === 'failed' ? 'bg-white/20 text-white' :
-                                                'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                        }`}
-                                >
-                                    {activeMethod === 'bluetooth' && cooldownSeconds > 0
-                                        ? `${language === 'ar' ? 'انتظر' : 'Wait'} (${cooldownSeconds}s)`
-                                        : connectionState === 'connected' ? t('stopListening') :
-                                            connectionState === 'connecting' ? t('connecting') :
-                                                t('startListening')}
-                                </button>
-                            </div>
-                        </div>
+                            )}
 
-                        {/* LAN Info Panel */}
-                        {activeMethod === 'lan' && (
-                            <div className={`p-3 rounded-2xl border flex flex-col gap-1 flex-shrink-0 ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
-                                <div className="flex items-center justify-center w-full gap-2 mb-1">
-                                    <Wifi size={20} className="text-blue-500" />
-                                    <p className="text-sm font-bold text-blue-500">{t('wifiReceiver')}</p>
-                                </div>
-                                <p className={`text-sm ${isDarkMode ? 'text-blue-200/80' : 'text-blue-800/80'}`}>
-                                    {language === 'ar' ? (
-                                        <>
-                                            1. {t('wifiStep1')}<br />
-                                            2. {t('wifiStep2')}<br />
-                                            3. {t('wifiStep3')}<br />
-                                            4. {t('wifiStep4')}<br />
-                                            5. {t('wifiStep5')}
-                                        </>
-                                    ) : (
-                                        <>
-                                            1. Connect both devices to the <b>same Wi-Fi</b>.<br />
-                                            2. Enter the <b>Server IP</b> & <b>Port</b> in the app.<br />
-                                            3. <b>Start Streaming</b> from the phone.<br />
-                                            4. Click <b>Start Listening</b>.<br />
-                                            5. Use the <b>volume shortcuts</b> to adjust the volume.
-                                        </>
-                                    )}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* USB Info Panel - Directly under Start button */}
-                        {activeMethod === 'usb' && (
-                            <div className={`p-3 rounded-2xl border flex flex-col gap-1 flex-shrink-0 ${isDarkMode ? 'bg-purple-500/10 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
-                                <div className="flex items-center justify-center w-full gap-2 mb-1">
-                                    <Usb size={20} className="text-purple-500" />
-                                    <p className="text-sm font-bold text-purple-500">{t('usbBridge')}</p>
-                                </div>
-                                <p className={`text-sm ${isDarkMode ? 'text-purple-200/80' : 'text-purple-800/80'}`}>
-                                    {language === 'ar' ? (
-                                        <>
-                                            1. {t('usbStep1')}<br />
-                                            2. {t('usbStep2')}<br />
-                                            3. {t('usbStep3')}<br />
-                                            4. {t('usbStep4')}<br />
-                                            5. {t('usbStep5')}
-                                        </>
-                                    ) : (
-                                        <>
-                                            1. Enable <b>USB Debugging</b> (check phone app for info).<br />
-                                            2. Connect via USB and <b>allow</b> the connection prompt.<br />
-                                            3. <b>Start Streaming</b> from the phone.<br />
-                                            4. Select your device and click <b>Start Listening</b>.<br />
-                                            5. Use the <b>volume shortcuts</b> to adjust the volume.
-                                        </>
-                                    )}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* --- CONFIGURATION PANELS (Only when Idle) --- */}
-                        {connectionState === 'idle' && (
-                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex-shrink-0">
-
-                                {/* LAN Settings */}
-                                {activeMethod === 'lan' && (
-                                    <div className="grid grid-cols-1 gap-2">
-                                        <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
-                                            <div className="flex justify-between items-center mb-3">
-                                                <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('buffer')}</label>
-                                                <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 100 && (language === 'ar' ? ' (افتراضي)' : ' (Default)')}</span>
-                                            </div>
-                                            <input
-                                                type="range"
-                                                min="20"
-                                                max="1000"
-                                                step="10"
-                                                value={bufferValue}
-                                                onChange={(e) => setBufferValue(parseInt(e.target.value))}
-                                                className={`w-full h-1.5 bg-zinc-500/20 rounded-lg appearance-none cursor-pointer ${getBufferAccent(bufferValue)}`}
-                                            />
-                                            <div className="flex justify-between text-[10px] opacity-40 mt-3 font-medium px-1">
-                                                <span>{t('fasterAudio')}</span>
-                                                <span>{t('smootherAudio')}</span>
-                                            </div>
-                                        </div>
-
-
+                            {/* USB Info Panel - Directly under Start button */}
+                            {activeMethod === 'usb' && (
+                                <div className={`p-3 rounded-2xl border flex flex-col gap-1 flex-shrink-0 ${isDarkMode ? 'bg-purple-500/10 border-purple-500/20' : 'bg-purple-50 border-purple-200'}`}>
+                                    <div className="flex items-center justify-center w-full gap-2 mb-1">
+                                        <Usb size={20} className="text-purple-500" />
+                                        <p className="text-sm font-bold text-purple-500">{t('usbBridge')}</p>
                                     </div>
-                                )}
+                                    <p className={`text-sm ${isDarkMode ? 'text-purple-200/80' : 'text-purple-800/80'}`}>
+                                        {language === 'ar' ? (
+                                            <>
+                                                1. {t('usbStep1')}<br />
+                                                2. {t('usbStep2')}<br />
+                                                3. {t('usbStep3')}<br />
+                                                4. {t('usbStep4')}<br />
+                                                5. {t('usbStep5')}
+                                            </>
+                                        ) : (
+                                            <>
+                                                1. Enable <b>USB Debugging</b> (check phone app for info).<br />
+                                                2. Connect via USB and <b>allow</b> the connection prompt.<br />
+                                                3. <b>Start Streaming</b> from the phone.<br />
+                                                4. Select your device and click <b>Start Listening</b>.<br />
+                                                5. Use the <b>volume shortcuts</b> to adjust the volume.
+                                            </>
+                                        )}
+                                    </p>
+                                </div>
+                            )}
 
-                                {/* USB Settings */}
-                                {activeMethod === 'usb' && (
-                                    <div className="space-y-2">
-                                        <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
-                                            <div className="flex items-center justify-between mb-3">
-                                                <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('androidDevice')}</label>
-                                                <button onClick={refreshUsbDevices} className="p-1 hover:bg-zinc-500/10 rounded-full transition-colors">
-                                                    <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-                                                </button>
-                                            </div>
-                                            {adbStatus === 'missing' ? (
-                                                <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-xl flex items-center gap-2">
-                                                    <AlertCircle size={16} /> <span>{t('adbMissing')}</span>
-                                                </div>
-                                            ) : (
-                                                <div className="relative">
-                                                    <select
-                                                        value={selectedUsbDevice}
-                                                        onChange={(e) => setSelectedUsbDevice(e.target.value)}
-                                                        className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${language === 'ar' ? 'pl-10' : 'pr-10'} ${isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}
-                                                    >
-                                                        {usbDevices.length === 0 && <option value="">{t('noDevices')}</option>}
-                                                        {usbDevices.map(d => (
-                                                            <option key={d.serial} value={d.serial}>{d.model} ({d.serial.slice(0, 4)}...)</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronRight size={14} className={`absolute top-3.5 pointer-events-none opacity-50 rotate-90 ${language === 'ar' ? 'left-3' : 'right-3'}`} />
-                                                </div>
-                                            )}
-                                        </div>
+                            {/* --- CONFIGURATION PANELS (Only when Idle) --- */}
+                            {connectionState === 'idle' && (
+                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex-shrink-0">
 
+                                    {/* LAN Settings */}
+                                    {activeMethod === 'lan' && (
                                         <div className="grid grid-cols-1 gap-2">
-                                            <div className={`p-2 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                                            <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
                                                 <div className="flex justify-between items-center mb-3">
                                                     <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('buffer')}</label>
-                                                    <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 10 && (language === 'ar' ? ' (افتراضي)' : ' (Default)')}</span>
+                                                    <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 100 && (language === 'ar' ? ' (افتراضي)' : ' (Default)')}</span>
                                                 </div>
                                                 <input
                                                     type="range"
-                                                    min="10"
+                                                    min="20"
                                                     max="1000"
                                                     step="10"
                                                     value={bufferValue}
@@ -1690,129 +1736,201 @@ const App = () => {
                                                     className={`w-full h-1.5 bg-zinc-500/20 rounded-lg appearance-none cursor-pointer ${getBufferAccent(bufferValue)}`}
                                                 />
                                                 <div className="flex justify-between text-[10px] opacity-40 mt-3 font-medium px-1">
-                                                    <span>Faster Audio</span>
-                                                    <span>Smoother Audio</span>
+                                                    <span>{t('fasterAudio')}</span>
+                                                    <span>{t('smootherAudio')}</span>
+                                                </div>
+                                            </div>
+
+
+                                        </div>
+                                    )}
+
+                                    {/* USB Settings */}
+                                    {activeMethod === 'usb' && (
+                                        <div className="space-y-2">
+                                            <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('androidDevice')}</label>
+                                                    <button onClick={refreshUsbDevices} className="p-1 hover:bg-zinc-500/10 rounded-full transition-colors">
+                                                        <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+                                                    </button>
+                                                </div>
+                                                {adbStatus === 'missing' ? (
+                                                    <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-xl flex items-center gap-2">
+                                                        <AlertCircle size={16} /> <span>{t('adbMissing')}</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="relative">
+                                                        <select
+                                                            value={selectedUsbDevice}
+                                                            onChange={(e) => setSelectedUsbDevice(e.target.value)}
+                                                            className={`w-full p-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm ${language === 'ar' ? 'pl-10' : 'pr-10'} ${isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-50 border-zinc-200'}`}
+                                                        >
+                                                            {usbDevices.length === 0 && <option value="">{t('noDevices')}</option>}
+                                                            {usbDevices.map(d => (
+                                                                <option key={d.serial} value={d.serial}>{d.model} ({d.serial.slice(0, 4)}...)</option>
+                                                            ))}
+                                                        </select>
+                                                        <ChevronRight size={14} className={`absolute top-3.5 pointer-events-none opacity-50 rotate-90 ${language === 'ar' ? 'left-3' : 'right-3'}`} />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2">
+                                                <div className={`p-2 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <label className="text-xs font-bold uppercase tracking-wider opacity-60">{t('buffer')}</label>
+                                                        <span className={`text-xs font-bold ${getBufferColor(bufferValue)}`}>{bufferValue}ms{bufferValue === 10 && (language === 'ar' ? ' (افتراضي)' : ' (Default)')}</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="10"
+                                                        max="1000"
+                                                        step="10"
+                                                        value={bufferValue}
+                                                        onChange={(e) => setBufferValue(parseInt(e.target.value))}
+                                                        className={`w-full h-1.5 bg-zinc-500/20 rounded-lg appearance-none cursor-pointer ${getBufferAccent(bufferValue)}`}
+                                                    />
+                                                    <div className="flex justify-between text-[10px] opacity-40 mt-3 font-medium px-1">
+                                                        <span>Faster Audio</span>
+                                                        <span>Smoother Audio</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeMethod === 'bluetooth' && (
+                                <div className={`p-3 rounded-2xl border flex flex-col gap-2 flex-shrink-0 ${isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <Bluetooth size={16} className="text-amber-500" />
+                                        <p className="text-sm font-bold text-amber-500">{t('bluetoothExp')}</p>
+                                    </div>
+                                    <div className={`text-sm ${language === 'ar' ? 'text-right' : 'text-left'} space-y-1 ${isDarkMode ? 'text-amber-200/80' : 'text-amber-800/80'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                                        <p className={`p-2 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/10' : 'bg-white/50 border-amber-200'}`}>
+                                            <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('bluetoothNote')}
+                                        </p>
+                                        <ol className={`list-decimal list-inside space-y-1 px-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                                            <li>{t('bluetoothStep1')}</li>
+                                            <li>{t('bluetoothStep2')}</li>
+                                            <li>{t('bluetoothStep3')}</li>
+                                            <li className="mt-1 pt-1 border-t border-amber-500/20">{t('bluetoothStep3_Alt')}</li>
+                                            <li>{t('bluetoothStep4_Alt')}</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className={`grid grid-cols-1 gap-3 flex-1 max-h-48 ${activeMethod === 'bluetooth' ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
+                                {/* Device Name / IP / Bluetooth Name (PC) */}
+                                <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
+                                    <div className="flex items-center gap-2 mb-1 opacity-60">
+                                        {activeMethod === 'usb' ? <Smartphone size={16} /> :
+                                            activeMethod === 'bluetooth' ? <Bluetooth size={16} /> :
+                                                <Info size={16} />}
+                                        <span className="text-xs font-bold uppercase tracking-wider">
+                                            {activeMethod === 'usb' ? t('phoneName') :
+                                                activeMethod === 'bluetooth' ? t('bluetoothName') :
+                                                    t('deviceIP')}
+                                        </span>
+                                    </div>
+                                    <p className={`text-xl font-bold tracking-tight truncate ${activeMethod !== 'usb' ? 'font-mono' : ''}`}>
+                                        {activeMethod === 'usb'
+                                            ? (usbDevices.find(d => d.serial === selectedUsbDevice)?.model || (language === 'ar' ? 'لا يوجد جهاز' : 'No Device'))
+                                            : activeMethod === 'bluetooth'
+                                                ? (systemInfo.hostname || (language === 'ar' ? 'هذا الكمبيوتر' : 'This PC'))
+                                                : systemInfo.ip}
+                                    </p>
+                                </div>
+
+                                {/* Connected to (Phone) - Bluetooth ONLY */}
+                                {activeMethod === 'bluetooth' && (
+                                    <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
+                                        <div className="flex items-center gap-2 mb-1 opacity-60">
+                                            <Smartphone size={16} />
+                                            <span className="text-xs font-bold uppercase tracking-wider">{t('connectedTo')}</span>
+                                        </div>
+                                        <p className="text-xl font-bold tracking-tight truncate">
+                                            {connectionState === 'connected'
+                                                ? (bluetoothDeviceName || (language === 'ar' ? 'جهاز غير معروف' : 'Unknown Device'))
+                                                : '--'}
+                                        </p>
                                     </div>
                                 )}
-                            </div>
-                        )}
 
-                        {activeMethod === 'bluetooth' && (
-                            <div className={`p-3 rounded-2xl border flex flex-col gap-2 flex-shrink-0 ${isDarkMode ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
-                                <div className="flex items-center justify-center gap-2">
-                                    <Bluetooth size={16} className="text-amber-500" />
-                                    <p className="text-sm font-bold text-amber-500">{t('bluetoothExp')}</p>
-                                </div>
-                                <div className={`text-sm ${language === 'ar' ? 'text-right' : 'text-left'} space-y-1 ${isDarkMode ? 'text-amber-200/80' : 'text-amber-800/80'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                                    <p className={`p-2 rounded-xl border ${isDarkMode ? 'bg-amber-500/10 border-amber-500/10' : 'bg-white/50 border-amber-200'}`}>
-                                        <b className="text-amber-500">{language === 'ar' ? 'ملاحظة:' : 'Note:'}</b> {t('bluetoothNote')}
-                                    </p>
-                                    <ol className={`list-decimal list-inside space-y-1 px-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                                        <li>{t('bluetoothStep1')}</li>
-                                        <li>{t('bluetoothStep2')}</li>
-                                        <li>{t('bluetoothStep3')}</li>
-                                        <li className="mt-1 pt-1 border-t border-amber-500/20">{t('bluetoothStep3_Alt')}</li>
-                                        <li>{t('bluetoothStep4_Alt')}</li>
-                                    </ol>
-                                </div>
-                            </div>
-                        )}
+                                {/* Est. Latency - HIDDEN for Bluetooth */}
+                                {activeMethod !== 'bluetooth' && (
+                                    <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
+                                        <div className="flex items-center gap-2 mb-1 opacity-60">
+                                            <Cpu size={16} />
+                                            <span className="text-xs font-bold uppercase tracking-wider">{t('estLatency')}</span>
+                                        </div>
+                                        <p className="text-xl font-bold">{isConnected ? `${latencyMs}ms` : '--'}</p>
+                                    </div>
+                                )}
 
-                        <div className={`grid grid-cols-1 gap-3 flex-1 max-h-48 ${activeMethod === 'bluetooth' ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
-                            {/* Device Name / IP / Bluetooth Name (PC) */}
-                            <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
-                                <div className="flex items-center gap-2 mb-1 opacity-60">
-                                    {activeMethod === 'usb' ? <Smartphone size={16} /> :
-                                        activeMethod === 'bluetooth' ? <Bluetooth size={16} /> :
-                                            <Info size={16} />}
-                                    <span className="text-xs font-bold uppercase tracking-wider">
-                                        {activeMethod === 'usb' ? t('phoneName') :
-                                            activeMethod === 'bluetooth' ? t('bluetoothName') :
-                                                t('deviceIP')}
-                                    </span>
-                                </div>
-                                <p className={`text-xl font-bold tracking-tight truncate ${activeMethod !== 'usb' ? 'font-mono' : ''}`}>
-                                    {activeMethod === 'usb'
-                                        ? (usbDevices.find(d => d.serial === selectedUsbDevice)?.model || (language === 'ar' ? 'لا يوجد جهاز' : 'No Device'))
-                                        : activeMethod === 'bluetooth'
-                                            ? (systemInfo.hostname || (language === 'ar' ? 'هذا الكمبيوتر' : 'This PC'))
-                                            : systemInfo.ip}
-                                </p>
-                            </div>
-
-                            {/* Connected to (Phone) - Bluetooth ONLY */}
-                            {activeMethod === 'bluetooth' && (
+                                {/* Stats - Boolean for Bluetooth, Packet stats for others */}
                                 <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
                                     <div className="flex items-center gap-2 mb-1 opacity-60">
-                                        <Smartphone size={16} />
-                                        <span className="text-xs font-bold uppercase tracking-wider">{t('connectedTo')}</span>
+                                        <ShieldCheck size={16} />
+                                        <span className="text-xs font-bold uppercase tracking-wider">{t('stats')}</span>
                                     </div>
-                                    <p className="text-xl font-bold tracking-tight truncate">
-                                        {connectionState === 'connected'
-                                            ? (bluetoothDeviceName || (language === 'ar' ? 'جهاز غير معروف' : 'Unknown Device'))
-                                            : '--'}
+                                    <p className="text-sm font-bold truncate" dir="ltr">
+                                        {activeMethod === 'bluetooth'
+                                            ? (connectionState === 'connected' ? t('active') : t('idle'))
+                                            : (isConnected ? `${t('rec')} ${stats.received} | ${t('lost')} ${stats.lost}` : t('idle'))}
                                     </p>
                                 </div>
-                            )}
 
-                            {/* Est. Latency - HIDDEN for Bluetooth */}
-                            {activeMethod !== 'bluetooth' && (
-                                <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
-                                    <div className="flex items-center gap-2 mb-1 opacity-60">
-                                        <Cpu size={16} />
-                                        <span className="text-xs font-bold uppercase tracking-wider">{t('estLatency')}</span>
-                                    </div>
-                                    <p className="text-xl font-bold">{isConnected ? `${latencyMs}ms` : '--'}</p>
-                                </div>
-                            )}
-
-                            {/* Stats - Boolean for Bluetooth, Packet stats for others */}
-                            <div className={`p-2 rounded-3xl h-full flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900' : 'bg-white border border-zinc-200'}`}>
-                                <div className="flex items-center gap-2 mb-1 opacity-60">
-                                    <ShieldCheck size={16} />
-                                    <span className="text-xs font-bold uppercase tracking-wider">{t('stats')}</span>
-                                </div>
-                                <p className="text-sm font-bold truncate" dir="ltr">
-                                    {activeMethod === 'bluetooth'
-                                        ? (connectionState === 'connected' ? t('active') : t('idle'))
-                                        : (isConnected ? `${t('rec')} ${stats.received} | ${t('lost')} ${stats.lost}` : t('idle'))}
-                                </p>
                             </div>
-
                         </div>
-                    </div>
-                </section >
-            </main >
+                    </section >
+                </main>
+            )}
 
             {/* --- FOOTER BAR --- */}
-            <footer className="h-14 flex items-center justify-between px-4 relative">
-                {/* Language Toggle - Left */}
-                <button
-                    onClick={toggleLanguage}
-                    className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-4 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg`}
-                    title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
-                >
-                    <Globe size={14} className="text-blue-500" />
-                    {language === 'en' ? 'English' : 'العربية'}
-                </button>
+            {!isFeedbackOpen && !isBugReportOpen && (
+                <footer className="h-14 flex items-center justify-between px-4 relative">
+                    {/* Left Buttons Group */}
+                    <div className="flex items-center gap-2">
+                        {/* Language Toggle */}
+                        <button
+                            onClick={toggleLanguage}
+                            className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-4 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg`}
+                            title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+                        >
+                            <Globe size={14} className="text-blue-500" />
+                            {language === 'en' ? 'العربية' : 'English'}
+                        </button>
 
-                {/* Support Button - Center */}
-                <button
-                    onClick={() => { setSupportView('info'); setIsSupportOpen(true); }}
-                    className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-6 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg absolute left-1/2 -translate-x-1/2`}
-                >
-                    <Coffee size={14} className="text-amber-500" />
-                    {t('supportDev')}
-                </button>
+                        {/* Report Bug Button */}
+                        <button
+                            onClick={() => setIsBugReportOpen(true)}
+                            className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-4 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg`}
+                            title={language === 'en' ? 'Report a Bug' : 'الإبلاغ عن خطأ'}
+                        >
+                            <Bug size={14} className="text-red-500" />
+                            {language === 'en' ? 'Report Bug' : 'إبلاغ عن خطأ'}
+                        </button>
+                    </div>
 
-                {/* Version Display - Right */}
-                <div className="w-24 text-right">
-                    <span className={`text-[10px] font-mono opacity-40 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>v{appVersion}</span>
-                </div>
-            </footer>
+                    {/* Support Button - Center */}
+                    <button
+                        onClick={() => { setSupportView('info'); setIsSupportOpen(true); }}
+                        className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase py-2 px-6 rounded-full transition-all hover:scale-105 ${isDarkMode ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400' : 'bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600'} shadow-lg absolute left-1/2 -translate-x-1/2`}
+                    >
+                        <Coffee size={14} className="text-amber-500" />
+                        {t('supportDev')}
+                    </button>
+
+                    {/* Version Display - Right */}
+                    <div className="w-24 text-right">
+                        <span className={`text-[10px] font-mono opacity-40 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>v{appVersion}</span>
+                    </div>
+                </footer>
+            )}
 
             {/* --- SUPPORT MODAL (Multi-page) --- */}
             <Modal
@@ -2022,36 +2140,49 @@ const App = () => {
                                                 </div>
                                                 {note.type === 'update' && <Info size={16} className="text-blue-500 shrink-0" />}
                                             </div>
-                                            {note.action && (
-                                                <button
-                                                    onClick={() => {
-                                                        if (note.type === 'update' && !isInstalled) {
-                                                            handleUpdateAction(note.id);
-                                                        } else if (note.link) {
-                                                            window.open(note.link, '_blank');
-                                                        }
-                                                    }}
-                                                    disabled={(note.type === 'update' && updateDownloading && downloadingId !== note.id) || isInstalled}
-                                                    className={`mt-3 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${isInstalled
-                                                        ? 'bg-zinc-500/20 text-zinc-500 cursor-default hover:bg-zinc-500/20'
-                                                        : note.type === 'update' && downloadingId === note.id
-                                                            ? 'bg-blue-400 cursor-wait'
-                                                            : note.type === 'update' && readyUpdateId === note.id
-                                                                ? 'bg-green-600 hover:bg-green-700'
-                                                                : 'bg-blue-600 hover:bg-blue-700'
-                                                        }`}
-                                                >
-                                                    {note.type === 'update'
-                                                        ? isInstalled
-                                                            ? t('updated')
-                                                            : downloadingId === note.id
-                                                                ? `${t('downloading')}... ${updateProgress}%`
-                                                                : readyUpdateId === note.id
-                                                                    ? t('restartToInstall')
-                                                                    : t('downloadUpdate')
-                                                        : note.action}
-                                                </button>
-                                            )}
+                                            {note.action && (() => {
+                                                const sentFeedbacks = JSON.parse(localStorage.getItem('sent_feedbacks') || '[]');
+                                                const isFeedbackSent = note.type === 'feedback' && sentFeedbacks.includes(note.id);
+
+                                                return (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (note.type === 'update' && !isInstalled) {
+                                                                handleUpdateAction(note.id);
+                                                            } else if (note.type === 'feedback' && !isFeedbackSent) {
+                                                                setFeedbackNotificationId(note.id);
+                                                                setIsNotificationOpen(false);
+                                                                setIsFeedbackOpen(true);
+                                                            } else if (note.link) {
+                                                                window.open(note.link, '_blank');
+                                                            }
+                                                        }}
+                                                        disabled={(note.type === 'update' && updateDownloading && downloadingId !== note.id) || isInstalled || isFeedbackSent}
+                                                        className={`mt-3 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${isInstalled || isFeedbackSent
+                                                            ? 'bg-zinc-500/20 text-zinc-500 cursor-default hover:bg-zinc-500/20'
+                                                            : note.type === 'update' && downloadingId === note.id
+                                                                ? 'bg-blue-400 cursor-wait'
+                                                                : note.type === 'update' && readyUpdateId === note.id
+                                                                    ? 'bg-green-600 hover:bg-green-700'
+                                                                    : 'bg-blue-600 hover:bg-blue-700'
+                                                            }`}
+                                                    >
+                                                        {note.type === 'update'
+                                                            ? isInstalled
+                                                                ? t('updated')
+                                                                : downloadingId === note.id
+                                                                    ? `${t('downloading')}... ${updateProgress}%`
+                                                                    : readyUpdateId === note.id
+                                                                        ? t('restartToInstall')
+                                                                        : t('downloadUpdate')
+                                                            : note.type === 'feedback'
+                                                                ? isFeedbackSent
+                                                                    ? t('feedbackSent')
+                                                                    : t('rateApp')
+                                                                : note.action}
+                                                    </button>
+                                                );
+                                            })()}
                                         </div>
                                     )
                                 })}

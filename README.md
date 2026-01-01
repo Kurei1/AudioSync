@@ -98,6 +98,26 @@ cd PHONE
 
 ---
 
+---
+
+## Configuration
+
+**Important:** This project uses Firebase for feedback and bug reporting. You must provide your own Firebase configuration.
+
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable **Firestore Database** and **Authentication** (Anonymous auth)
+3. Copy `PC/react/firebase-config.example.js` to `PC/react/firebase-config.js`
+4. Fill in your project details:
+   ```javascript
+   const firebaseConfig = {
+       apiKey: "YOUR_API_KEY",
+       // ... other values
+   };
+   const appId = "your-app-id"; 
+   ```
+
+---
+
 ## Quick Start
 
 1. Install the PC receiver and Android app
