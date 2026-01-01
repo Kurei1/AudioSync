@@ -75,6 +75,19 @@
         "type": "info",
         "action": "Support",
         "link": "https://github.com/Kurei1/AudioSync#support"
+    },
+    // ----------------------------------------------------------
+    // TYPE: "feedback" - In-App Feedback
+    // ----------------------------------------------------------
+    // - Triggers the in-app feedback form
+    // - "action" text is automatically translated (Rate App / قيّم التطبيق)
+    // - "id" matches logic in app.jsx for auto-translation of title/body
+    {
+        "id": "feedback_001",
+        "title": "I value your opinion",
+        "message": "Help me improve AudioSync by sharing your thoughts.",
+        "type": "feedback",
+        "action": "Rate App"
     }
 ]
 // ============================================================
