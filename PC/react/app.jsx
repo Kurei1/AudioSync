@@ -322,6 +322,8 @@ const App = () => {
             couldNotReceiveData: "Could not receive any data.",
             rateApp: "Rate App",
             feedbackSent: "Feedback Sent",
+            viewFeedback: "View Feedback",
+            dataMissing: "Could not load feedback data",
         },
         ar: {
             // Title bar
@@ -436,6 +438,8 @@ const App = () => {
             couldNotReceiveData: "تعذر استقبال البيانات.",
             rateApp: "قيّم التطبيق",
             feedbackSent: "تم إرسال الرأي",
+            viewFeedback: "عرض رأيي",
+            dataMissing: "تعذر تحميل بيانات الرأي",
         }
     };
 
@@ -467,7 +471,10 @@ const App = () => {
     const [activeMethod, setActiveMethod] = useState('lan');
     const [isSupportOpen, setIsSupportOpen] = useState(false);
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [feedbackNotificationId, setFeedbackNotificationId] = useState(null); // ID of the notification that triggered feedback
+    const [feedbackNotificationId, setFeedbackNotificationId] = useState(null);
+    const [feedbackReadOnly, setFeedbackReadOnly] = useState(false);
+    const [feedbackInitialData, setFeedbackInitialData] = useState(null);
+    // ID of the notification that triggered feedback
     const [isBugReportOpen, setIsBugReportOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
@@ -1367,15 +1374,16 @@ const App = () => {
                         language={language}
                         notificationId={feedbackNotificationId}
                         onSubmitSuccess={() => {
-                            // Mark feedback as sent for this notification
-                            if (feedbackNotificationId) {
-                                const sentFeedbacks = JSON.parse(localStorage.getItem('sent_feedbacks') || '[]');
-                                if (!sentFeedbacks.includes(feedbackNotificationId)) {
-                                    sentFeedbacks.push(feedbackNotificationId);
-                                    localStorage.setItem('sent_feedbacks', JSON.stringify(sentFeedbacks));
-                                }
+                            // Mark as read in local storage
+                            const sentFeedbacks = JSON.parse(localStorage.getItem('sent_feedbacks') || '[]');
+                            if (feedbackNotificationId && !sentFeedbacks.includes(feedbackNotificationId)) {
+                                const newFeedbacks = [...sentFeedbacks, feedbackNotificationId];
+                                localStorage.setItem('sent_feedbacks', JSON.stringify(newFeedbacks));
+                                setNotifications(prev => [...prev]); // Force re-render
                             }
                         }}
+                        readOnly={feedbackReadOnly}
+                        initialData={feedbackInitialData}
                     />
                 </main>
             ) : isBugReportOpen ? (
@@ -2152,22 +2160,42 @@ const App = () => {
                                             {note.action && (() => {
                                                 const sentFeedbacks = JSON.parse(localStorage.getItem('sent_feedbacks') || '[]');
                                                 const isFeedbackSent = note.type === 'feedback' && sentFeedbacks.includes(note.id);
+                                                const hasFeedbackData = isFeedbackSent && !!localStorage.getItem(`feedback_data_${note.id}`);
 
                                                 return (
                                                     <button
                                                         onClick={() => {
                                                             if (note.type === 'update' && !isInstalled) {
                                                                 handleUpdateAction(note.id);
-                                                            } else if (note.type === 'feedback' && !isFeedbackSent) {
-                                                                setFeedbackNotificationId(note.id);
-                                                                setIsNotificationOpen(false);
-                                                                setIsFeedbackOpen(true);
+                                                            } else if (note.type === 'feedback') {
+                                                                if (!isFeedbackSent) {
+                                                                    setFeedbackNotificationId(note.id);
+                                                                    setFeedbackReadOnly(false);
+                                                                    setFeedbackInitialData(null);
+                                                                    setIsNotificationOpen(false);
+                                                                    setIsFeedbackOpen(true);
+                                                                } else if (hasFeedbackData) {
+                                                                    // VIEW MODE logic
+                                                                    const storedData = localStorage.getItem(`feedback_data_${note.id}`);
+                                                                    if (storedData) {
+                                                                        try {
+                                                                            setFeedbackInitialData(JSON.parse(storedData));
+                                                                            setFeedbackReadOnly(true);
+                                                                            setFeedbackNotificationId(note.id);
+                                                                            setIsNotificationOpen(false);
+                                                                            setIsFeedbackOpen(true);
+                                                                        } catch (e) {
+                                                                            console.error("Failed to parse saved feedback", e);
+                                                                            showToast(t('dataMissing'), 'error');
+                                                                        }
+                                                                    }
+                                                                }
                                                             } else if (note.link) {
                                                                 window.open(note.link, '_blank');
                                                             }
                                                         }}
-                                                        disabled={(note.type === 'update' && updateDownloading && downloadingId !== note.id) || isInstalled || isFeedbackSent}
-                                                        className={`mt-3 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${isInstalled || isFeedbackSent
+                                                        disabled={(note.type === 'update' && updateDownloading && downloadingId !== note.id) || isInstalled || (isFeedbackSent && !hasFeedbackData)}
+                                                        className={`mt-4 w-full py-2 text-white text-xs font-bold rounded-xl transition-colors ${isInstalled || (isFeedbackSent && !hasFeedbackData)
                                                             ? 'bg-zinc-500/20 text-zinc-500 cursor-default hover:bg-zinc-500/20'
                                                             : note.type === 'update' && downloadingId === note.id
                                                                 ? 'bg-blue-400 cursor-wait'
@@ -2186,7 +2214,9 @@ const App = () => {
                                                                         : t('downloadUpdate')
                                                             : note.type === 'feedback'
                                                                 ? isFeedbackSent
-                                                                    ? t('feedbackSent')
+                                                                    ? hasFeedbackData
+                                                                        ? t('viewFeedback')
+                                                                        : t('feedbackSent')
                                                                     : t('rateApp')
                                                                 : note.action}
                                                     </button>

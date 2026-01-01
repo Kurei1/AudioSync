@@ -17,17 +17,17 @@ import { signInAnonymously } from 'firebase/auth';
 
 import { db, auth, appId } from './firebase-config';
 
-const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificationId = null, onSubmitSuccess = () => { } }) => {
+const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificationId = null, onSubmitSuccess = () => { }, readOnly = false, initialData = null }) => {
     const [submitted, setSubmitted] = useState(false);
-    const [rating, setRating] = useState(0);
+    const [rating, setRating] = useState(initialData?.rating || 0);
     const [hoverRating, setHoverRating] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState(initialData || {
         name: '',
         email: '',
         featureRating: 'definitely',
         feedback: '',
-        subscribe: false // Default to unchecked
+        subscribe: false
     });
 
     // Translations
@@ -128,6 +128,15 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                 source: 'pc_app_v1',
                 notificationId: notificationId // Track which notification triggered this
             });
+
+            // Save for viewing later
+            if (notificationId) {
+                localStorage.setItem(`feedback_data_${notificationId}`, JSON.stringify({
+                    ...formData,
+                    rating,
+                    timestamp: Date.now()
+                }));
+            }
             // Call the success callback to mark feedback as sent
             onSubmitSuccess();
         } catch (error) {
@@ -287,7 +296,8 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                             value={formData.name}
                                             onChange={handleInputChange}
                                             placeholder={t('namePlaceholder')}
-                                            className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border ${theme.input}`}
+                                            className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border ${theme.input} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                            disabled={readOnly}
                                         />
                                     </div>
                                     <div>
@@ -298,7 +308,8 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                             value={formData.email}
                                             onChange={handleInputChange}
                                             placeholder={t('emailPlaceholder')}
-                                            className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border ${theme.input}`}
+                                            className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border ${theme.input} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                            disabled={readOnly}
                                         />
                                     </div>
                                 </div>
@@ -322,8 +333,8 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                                 type="button"
                                                 onMouseEnter={() => setHoverRating(num)}
                                                 onMouseLeave={() => setHoverRating(0)}
-                                                onClick={() => setRating(num)}
-                                                className="p-1 transition-transform hover:scale-125 focus:outline-none"
+                                                onClick={() => !readOnly && setRating(num)}
+                                                className={`p-1 transition-transform ${readOnly ? 'cursor-default' : 'hover:scale-125 focus:outline-none'}`}
                                             >
                                                 <Star
                                                     className={`w-10 h-10 ${(hoverRating || rating) >= num
@@ -351,6 +362,7 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                                     className="peer sr-only"
                                                     onChange={handleInputChange}
                                                     defaultChecked={option.key === 'definitely'}
+                                                    disabled={readOnly}
                                                 />
                                                 <div className={`px-4 py-3 text-center rounded-xl transition-all text-sm font-medium border
                                                     peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
@@ -383,7 +395,8 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                         onChange={handleInputChange}
                                         rows="4"
                                         placeholder={t('feedbackPlaceholder')}
-                                        className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none border ${theme.input}`}
+                                        className={`w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none border ${theme.input} ${readOnly ? 'opacity-70' : ''}`}
+                                        disabled={readOnly}
                                     ></textarea>
                                 </div>
 
@@ -394,7 +407,8 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                         name="subscribe"
                                         checked={formData.subscribe}
                                         onChange={handleInputChange}
-                                        className={`w-5 h-5 text-blue-500 rounded focus:ring-blue-500 ${theme.input}`}
+                                        className={`w-5 h-5 text-blue-500 rounded focus:ring-blue-500 ${theme.input} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                        disabled={readOnly}
                                     />
                                     <label htmlFor="subscribe" className={`text-sm font-medium cursor-pointer ${theme.textSecondary}`}>
                                         {t('testFeatures')}
@@ -402,29 +416,33 @@ const FeedbackForm = ({ onClose, isDarkMode = true, language = 'en', notificatio
                                 </div>
                             </section>
 
-                            {/* Submit Button */}
-                            <div className="pt-6 text-center">
-                                <button
-                                    type="submit"
-                                    disabled={loading || rating === 0}
-                                    className={`w-full group relative flex items-center justify-center py-4 px-6 border border-transparent font-bold rounded-2xl transition-all shadow-xl overflow-hidden ${loading || rating === 0
-                                        ? (isDarkMode ? 'bg-zinc-800/50 text-zinc-500' : 'bg-zinc-200 text-zinc-400') + ' cursor-not-allowed shadow-none'
-                                        : theme.buttonPrimary
-                                        }`}
-                                >
-                                    {loading ? (
-                                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <span>{t('sendFeedback')}</span>
-                                            <Send className={`${isRTL ? 'mr-2 rotate-180' : 'ml-2'} w-5 h-5 group-hover:translate-x-1 transition-transform`} />
-                                        </>
-                                    )}
-                                </button>
-                                <p className={`mt-4 text-xs ${theme.textSecondary}`}>
-                                    {t('sendingNote')}
-                                </p>
-                            </div>
+
+
+                            {/* Submit Button - Hide if Read Only */}
+                            {!readOnly && (
+                                <div className="pt-6 text-center">
+                                    <button
+                                        type="submit"
+                                        disabled={loading || rating === 0}
+                                        className={`w-full group relative flex items-center justify-center py-4 px-6 border border-transparent font-bold rounded-2xl transition-all shadow-xl overflow-hidden ${loading || rating === 0
+                                            ? (isDarkMode ? 'bg-zinc-800/50 text-zinc-500' : 'bg-zinc-200 text-zinc-400') + ' cursor-not-allowed shadow-none'
+                                            : theme.buttonPrimary
+                                            }`}
+                                    >
+                                        {loading ? (
+                                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <span>{t('sendFeedback')}</span>
+                                                <Send className={`${isRTL ? 'mr-2 rotate-180' : 'ml-2'} w-5 h-5 group-hover:translate-x-1 transition-transform`} />
+                                            </>
+                                        )}
+                                    </button>
+                                    <p className={`mt-4 text-xs ${theme.textSecondary}`}>
+                                        {t('sendingNote')}
+                                    </p>
+                                </div>
+                            )}
 
                         </form>
                     </div>
